@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy & demo notice",
   description: "Red Crown is a concept demo. It does not sell anything, process payments or collect personal data.",
-};
+  path: "/privacy",
+});
 
 const ITEMS = [
   {

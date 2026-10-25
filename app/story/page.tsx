@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
@@ -6,10 +7,11 @@ import { PRESETS } from "@/data/products";
 import { presetImage, SHOE_IMAGE } from "@/lib/shoe-images";
 import { XMark } from "@/components/logo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Our approach",
   description: "The design principles behind Red Crown, a fictional footwear label: fewer parts, a shape built around the foot, and colour left to you.",
-};
+  path: "/story",
+});
 
 const PRINCIPLES = [
   {

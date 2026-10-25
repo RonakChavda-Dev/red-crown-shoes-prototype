@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PRODUCTS, getProduct } from "@/data/products";
@@ -16,11 +17,14 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/product/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const product = getProduct(slug);
-  if (!product) return { title: "Shoe not found" };
-  return {
+  if (!product) return { title: "Shoe not found", robots: { index: false, follow: true } };
+  return pageMetadata({
     title: `${product.name} (${product.code})`,
     description: `${product.tagline} A Red Crown concept shoe in ${product.colorways.length} colourways.`,
-  };
+    path: `/product/${product.slug}`,
+    image: `product-${product.slug}`,
+    imageAlt: `Red Crown ${product.name} in ${product.colorways[0].name}`,
+  });
 }
 
 export default async function ProductPage({ params }: PageProps<"/product/[slug]">) {

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { BagView } from "@/components/bag-view";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Bag",
   description: "Your Red Crown demo bag. Concept prices only; no purchase or payment is processed.",
-};
+  path: "/bag",
+  noindex: true,
+});
 
 export default function BagPage() {
   return (

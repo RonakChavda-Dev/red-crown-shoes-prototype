@@ -17,6 +17,20 @@ npm run build && npm start
 
 Checks: `npm run lint`, `npm run typecheck`, `npm run build`.
 
+## Hosting & SEO
+
+Set the public address before building so canonical URLs, the sitemap and share images point at it:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://your-domain.example
+```
+
+On Vercel this falls back to the project's production URL automatically; elsewhere it falls back to `http://localhost:3000`. The value is read at build time, so rebuild after changing it.
+
+What's included: per-page titles, descriptions and canonical URLs (`lib/seo.ts`), Open Graph + Twitter `summary_large_image` cards, `sitemap.xml`, `robots.txt`, a web manifest, an apple-touch icon and `WebSite` structured data on the home page. The bag is `noindex`.
+
+Share images are 1200×630 JPEGs in `public/og/`: a site-wide card, one for the customizer and one per product. Regenerate them with `scripts/og/render-og.mjs` after changing products or renders, then bump `OG_VERSION` in `lib/seo.ts` so social platforms fetch the new ones.
+
 ## Stack
 
 - **Next.js 16** (App Router, Cache Components, Turbopack) · **React 19.3** · **TypeScript**

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { Suspense } from "react";
 import { PRODUCTS } from "@/data/products";
 import { ShopCatalog, ShopCatalogFallback } from "@/components/shop-catalog";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Collection",
   description: "Eight original concept colourways from Red Crown across run, street and studio. Filter by category and tone.",
-};
+  path: "/shop",
+});
 
 export default function ShopPage() {
   return (

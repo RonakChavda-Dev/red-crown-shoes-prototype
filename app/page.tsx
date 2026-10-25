@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { FEATURED, HERO_BUILD, HERO_COLORS, PRODUCTS } from "@/data/products";
@@ -8,11 +9,13 @@ import { LayerStory } from "@/components/layer-story";
 import { PresetPreview } from "@/components/preset-preview";
 import { productImage } from "@/lib/shoe-images";
 
-export const metadata: Metadata = {
-  title: { absolute: "Red Crown — Move like you own it" },
+export const metadata: Metadata = pageMetadata({
+  title: "Red Crown — Move like you own it",
+  absoluteTitle: true,
   description:
     "A concept footwear label. Explore an interactive 3D shoe, browse the fictional collection and build your own pair.",
-};
+  path: "/",
+});
 
 const NOTES = [
   { n: "01", title: "Engineered knit", body: "One piece, no rubbing seams." },
@@ -20,9 +23,23 @@ const NOTES = [
   { n: "03", title: "Rockered sole", body: "Rolls heel to toe." },
 ];
 
+// Structured data: the site itself, described as the concept it is.
+const WEBSITE_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  description: "A concept storefront for a fictional footwear label, with an interactive 3D shoe and a live customizer.",
+  inLanguage: "en",
+};
+
 export default function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_LD).replace(/</g, "\\u003c") }}
+      />
       {/* ── Hero ── */}
       <section aria-labelledby="hero-title" className="relative overflow-hidden">
         <div
