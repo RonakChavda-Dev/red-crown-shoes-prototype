@@ -9,15 +9,24 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Production build:
+Production build (a fully static site in `out/`):
 
 ```bash
-npm run build && npm start
+npm run build && npm start   # serves out/ locally
 ```
 
 Checks: `npm run lint`, `npm run typecheck`, `npm run build`.
 
 ## Hosting & SEO
+
+The site is a static export (`output: "export"`): plain HTML, JS, images and the 3D model, with no server. On **Cloudflare Pages** use:
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Build output directory | `out` |
+| Environment variable | `NEXT_PUBLIC_SITE_URL` = your site's address, e.g. `https://red-crown.pages.dev` |
+| Environment variable | `NODE_VERSION` = `22` |
 
 Set the public address before building so canonical URLs, the sitemap and share images point at it:
 
@@ -25,7 +34,7 @@ Set the public address before building so canonical URLs, the sitemap and share 
 NEXT_PUBLIC_SITE_URL=https://your-domain.example
 ```
 
-On Vercel this falls back to the project's production URL automatically; elsewhere it falls back to `http://localhost:3000`. The value is read at build time, so rebuild after changing it.
+On Vercel this falls back to the project's production URL automatically; anywhere else (including Cloudflare) set it yourself, or it falls back to `http://localhost:3000`. The value is read at build time, so rebuild after changing it.
 
 What's included: per-page titles, descriptions and canonical URLs (`lib/seo.ts`), Open Graph + Twitter `summary_large_image` cards, `sitemap.xml`, `robots.txt`, a web manifest, an apple-touch icon and `WebSite` structured data on the home page. The bag is `noindex`.
 
@@ -33,7 +42,7 @@ Share images are 1200×630 JPEGs in `public/og/`: a site-wide card, one for the 
 
 ## Stack
 
-- **Next.js 16** (App Router, Cache Components, Turbopack) · **React 19.3** · **TypeScript**
+- **Next.js 16** (App Router, static export, Turbopack) · **React 19.3** · **TypeScript**
 - **Tailwind CSS v4**, with brand tokens defined in `app/globals.css` (`@theme`)
 - **three.js + React Three Fiber**: the realistic 3D shoe, lazy loaded on the client and recoloured live by zone
 - **Motion** for layout/presence animation; CSS for everything simpler; native **View Transitions** between routes

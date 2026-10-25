@@ -2,6 +2,9 @@ import type { MetadataRoute } from "next";
 import { PRODUCTS } from "@/data/products";
 import { SITE_URL } from "@/lib/seo";
 
+// Generated once at build time for the static export.
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages: { path: string; priority: number }[] = [
     { path: "/", priority: 1 },

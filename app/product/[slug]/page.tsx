@@ -6,9 +6,8 @@ import { PRODUCTS, getProduct } from "@/data/products";
 import { ProductView, ProductViewWithParams } from "@/components/product-view";
 import { ProductCard } from "@/components/product-card";
 
-// Every valid slug is prerendered, so letting navigation wait for the page keeps
-// the card-to-hero morph intact instead of flashing a skeleton.
-export const instant = false;
+// Only the catalogue's slugs exist; anything else is the static 404 page.
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return PRODUCTS.map((product) => ({ slug: product.slug }));
