@@ -1,0 +1,494 @@
+@import "tailwindcss";
+
+/* ───────────────────────── Design tokens ───────────────────────── */
+
+@theme {
+  /* Surfaces */
+  --color-ink: #080808;
+  --color-ink-2: #0d0d0f;
+  --color-surface: #121214;
+  --color-surface-2: #1a1a1d;
+  --color-surface-3: #232327;
+  --color-line: #27272b;
+  --color-line-strong: #3b3b40;
+
+  /* Type */
+  --color-paper: #f4f2f0;
+  --color-mute: #a7a39e; /* 8.1:1 on ink */
+  --color-dim: #8a8681; /* 5.4:1 on ink, 4.9:1 on surface-2 */
+
+  /* Accent */
+  --color-signal: #ff2638;
+  --color-signal-hot: #ff4a59;
+  --color-signal-deep: #a50f1c;
+
+  /* Fonts (next/font variables with system fallbacks) */
+  --font-display: var(--font-anton), "Impact", "Haettenschweiler", "Arial Narrow Bold", sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  /* Radii */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Layout */
+  --container-site: 90rem;
+  --container-prose: 38rem;
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --animate-marquee: marquee 38s linear infinite;
+  --animate-tape-in: tape-in 1.1s var(--ease-out-expo) 0.25s both;
+
+  @keyframes marquee {
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  @keyframes tape-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+}
+
+:root {
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --header-h: 4.25rem;
+  --dur-fast: 160ms;
+  --dur-base: 280ms;
+  --dur-slow: 640ms;
+  --glow-sm: 0 0 0 1px rgb(255 38 56 / 0.55), 0 6px 24px -6px rgb(255 38 56 / 0.55);
+  --glow-md: 0 0 0 1px rgb(255 38 56 / 0.6), 0 12px 40px -10px rgb(255 38 56 / 0.6);
+  --shadow-raise: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -24px rgb(0 0 0 / 0.8);
+  color-scheme: dark;
+}
+
+/* ───────────────────────── Base ───────────────────────── */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(var(--header-h) + 1rem);
+    background: var(--color-ink);
+  }
+
+  body {
+    background: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: var(--color-signal);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  button,
+  [role="button"],
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  img,
+  svg,
+  canvas {
+    display: block;
+  }
+
+  dialog {
+    color: inherit;
+  }
+}
+
+/* Subtle film grain: one fixed, composited layer. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ───────────────────────── Type scale ───────────────────────── */
+
+@utility display-xl {
+  font-family: var(--font-display);
+  font-size: clamp(3.4rem, 10.5vw, 9.5rem);
+  line-height: 0.92;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+@utility display-lg {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 6.6vw, 6rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+@utility display-md {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+@utility display-sm {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@utility lede {
+  font-size: clamp(1.02rem, 1.25vw, 1.18rem);
+  line-height: 1.6;
+  color: var(--color-mute);
+}
+
+@utility shell {
+  width: 100%;
+  max-width: var(--container-site);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* ───────────────────────── Controls ───────────────────────── */
+
+@utility btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0 1.4rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-base) ease,
+    transform var(--dur-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active:not(:disabled) {
+    transform: translateY(1px) scale(0.985);
+  }
+}
+
+/* Black text on red keeps AA contrast (5.3:1). */
+@utility btn-primary {
+  background: var(--color-signal);
+  color: var(--color-ink);
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: var(--color-signal-hot);
+    box-shadow: var(--glow-sm);
+  }
+
+  &:disabled {
+    background: var(--color-surface-3);
+    color: var(--color-dim);
+  }
+}
+
+@utility btn-ghost {
+  background: transparent;
+  color: var(--color-paper);
+  border: 1px solid var(--color-line-strong);
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    border-color: var(--color-paper);
+    background: rgb(244 242 240 / 0.04);
+  }
+}
+
+@utility btn-quiet {
+  background: var(--color-surface-2);
+  color: var(--color-paper);
+  border: 1px solid var(--color-line);
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    border-color: var(--color-line-strong);
+    background: var(--color-surface-3);
+  }
+}
+
+@utility chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+
+  &:hover {
+    color: var(--color-paper);
+    border-color: var(--color-mute);
+  }
+
+  &[aria-pressed="true"],
+  &[aria-checked="true"],
+  &[aria-current="true"] {
+    color: var(--color-ink);
+    background: var(--color-paper);
+    border-color: var(--color-paper);
+  }
+}
+
+@utility field {
+  min-height: 2.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  color: var(--color-paper);
+  padding: 0 0.9rem;
+  font-size: 0.9rem;
+  transition: border-color var(--dur-fast) ease;
+
+  &:hover {
+    border-color: var(--color-mute);
+  }
+}
+
+/* An underline that draws in on hover/focus. */
+@utility link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size var(--dur-base) var(--ease-out-expo);
+
+  &:hover,
+  &:focus-visible,
+  &[aria-current="page"] {
+    background-size: 100% 1px;
+  }
+}
+
+/* ───────────────────────── Motion helpers ───────────────────────── */
+
+/* Scroll reveal: content is only hidden when scripting can reveal it again. */
+@media (scripting: enabled) {
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+    transition:
+      opacity 0.7s var(--ease-out-expo),
+      transform 0.9s var(--ease-out-expo);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hero headline: each line rises out of a mask. */
+.rise-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.04em;
+  margin-bottom: -0.04em;
+}
+
+.rise-line > span {
+  display: block;
+  animation: rise 1s var(--ease-out-expo) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+@keyframes rise {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+}
+
+.fade-up {
+  animation: fade-up 0.9s var(--ease-out-expo) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+}
+
+/* Mobile menu: links cascade in when the dialog opens. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+.mobile-menu[open] .menu-item {
+  animation: menu-in 0.6s var(--ease-out-expo) both;
+  animation-delay: calc(var(--i) * 55ms + 60ms);
+}
+
+.mobile-menu[open] {
+  animation: fade-in 0.25s ease both;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Customizer preview swap on the home page. */
+.preset-swap {
+  animation: swap-in 0.6s var(--ease-out-expo) both;
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-18px, 6px, 0) rotate(-3deg);
+  }
+}
+
+.demo-dialog[open] {
+  animation: dialog-in 0.4s var(--ease-out-expo) both;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.97);
+  }
+}
+
+/* Bag counter pops when it changes. */
+.bag-count {
+  animation: pop 0.45s var(--ease-out-expo);
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.18);
+  }
+}
+
+/* ───────────────────────── View transitions ───────────────────────── */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(.page) {
+  animation: 180ms ease-in both vt-out;
+}
+
+::view-transition-new(.page) {
+  animation: 420ms var(--ease-out-expo) 80ms both vt-in;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+}
+
+::view-transition-group(.morph) {
+  animation-duration: 460ms;
+  animation-timing-function: var(--ease-out-expo);
+}
+
+/* ───────────────────────── Reduced motion ───────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
