@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { XMark } from "@/components/logo";
 
 const COLUMNS = [
   {
@@ -7,7 +6,7 @@ const COLUMNS = [
     links: [
       { href: "/shop", label: "Collection" },
       { href: "/shop?category=run", label: "Running shoes" },
-      { href: "/shop?category=trail", label: "Trail shoes" },
+      { href: "/shop?category=studio", label: "Studio shoes" },
       { href: "/story", label: "Our approach" },
     ],
   },
@@ -33,12 +32,12 @@ export function SiteFooter() {
       <div className="shell grid gap-12 pb-10 pt-16 md:grid-cols-[1.4fr_2fr] md:pt-20">
         <div className="max-w-sm">
           <p className="display-md">
-            Cut the <span className="text-signal">red tape.</span>
+            Own <span className="text-signal">every step.</span>
             <br />
             Keep moving.
           </p>
           <p className="mt-5 text-[0.92rem] leading-relaxed text-mute">
-            Red Tape is a fictional footwear label created as a design prototype. Nothing here is for sale, and no
+            Red Crown is a fictional footwear label created as a design prototype. Nothing here is for sale, and no
             orders or payments are processed.
           </p>
         </div>
@@ -60,20 +59,23 @@ export function SiteFooter() {
         </nav>
       </div>
 
-      <div aria-hidden className="shell relative select-none">
-        <div className="flex items-end gap-[2vw] border-t border-line pt-6">
-          <XMark className="mb-[1.6vw] size-[12vw] shrink-0 md:size-[9vw]" />
-          <span
-            className="font-display text-[22vw] uppercase leading-[0.78] tracking-tight text-transparent md:text-[17.5vw]"
-            style={{ WebkitTextStroke: "1px var(--color-line-strong)" }}
-          >
-            Red Tape
-          </span>
-        </div>
-      </div>
-
       <div className="shell flex flex-col gap-2 border-t border-line py-6 text-[0.8rem] text-dim sm:flex-row sm:justify-between">
-        <p>A concept storefront. All products, names and prices are fictional.</p>
+        <p>
+          A concept storefront. All products, names and prices are fictional. 3D shoe based on{" "}
+          <a
+            href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/MaterialsVariantsShoe"
+            className="link-draw text-mute hover:text-paper"
+            rel="noreferrer"
+            target="_blank"
+          >
+            “Materials Variants Shoe”
+          </a>{" "}
+          © 2021 Shopify,{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/" className="link-draw text-mute hover:text-paper" rel="noreferrer" target="_blank">
+            CC BY 4.0
+          </a>
+          , modified.
+        </p>
         <p className="font-mono uppercase tracking-[0.14em]">Concept season 01</p>
       </div>
     </footer>

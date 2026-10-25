@@ -1,48 +1,47 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, use, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { ZONES, type Build, type ShoeColors, type Zone } from "@/data/products";
-import { buildShoeGeometry, SHOE_LENGTH } from "./geometry";
+import { ZONES, type Finish, type ShoeColors, type Zone } from "@/data/products";
+import { createShoeMaterial, loadShoeAssets, SHOE_LENGTH, type ShoeMaterial } from "./shoe-assets";
 import type { Rig } from "./rig";
 
 export interface ShoeCanvasProps {
   colors: ShoeColors;
-  build: Build;
   rig: Rig;
   reducedMotion: boolean;
   /** Briefly light up a zone after it changes. */
   pulse?: { zone: Zone; key: number } | null;
   /** How much of the frame the shoe fills (1 = edge to edge). */
   fill?: number;
+  /** Surface of the upper. */
+  finish?: Finish;
   onReady: () => void;
   onError: () => void;
 }
 
-function makeKnitTexture() {
-  const size = 64;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#808080";
-  ctx.fillRect(0, 0, size, size);
-  for (let y = 0; y < size; y += 4) {
-    for (let x = 0; x < size; x += 4) {
-      const offset = (y / 4) % 2 === 0 ? 0 : 2;
-      ctx.fillStyle = "#b4b4b4";
-      ctx.fillRect(x + offset, y, 2, 3);
-      ctx.fillStyle = "#5a5a5a";
-      ctx.fillRect(x + offset + 2, y + 1, 1, 2);
-    }
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.anisotropy = 4;
-  return texture;
-}
+/*
+ * Drop two known, harmless three.js messages and forward everything else:
+ * R3F still creates a THREE.Clock internally (deprecated in r183), and the
+ * Direct3D shader compiler behind ANGLE on Windows reports precision notes
+ * (warning X4122) for three's own environment-map shaders.
+ */
+const isBenignShaderLog = (log: unknown) =>
+  typeof log === "string" &&
+  log
+    .split("\n")
+    .filter((line) => line.trim())
+    .every((line) => /warning X\d+:/.test(line));
+
+THREE.setConsoleFunction((type: "log" | "warn" | "error", message: string, ...params: unknown[]) => {
+  if (message.startsWith("THREE.Clock: This module has been deprecated")) return;
+  if (type === "warn" && message.startsWith("THREE.WebGLProgram: Program Info Log") && isBenignShaderLog(params[0])) return;
+  const trace = params[0] as { isStackTrace?: boolean; getError?: (m: string) => Error } | undefined;
+  if (trace?.isStackTrace && trace.getError) console[type](trace.getError(message));
+  else console[type](message, ...params);
+});
 
 function makeShadowTexture() {
   const size = 128;
@@ -50,8 +49,8 @@ function makeShadowTexture() {
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d")!;
   const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  gradient.addColorStop(0, "rgba(0,0,0,0.85)");
-  gradient.addColorStop(0.45, "rgba(0,0,0,0.45)");
+  gradient.addColorStop(0, "rgba(0,0,0,0.9)");
+  gradient.addColorStop(0.35, "rgba(0,0,0,0.55)");
   gradient.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
@@ -59,59 +58,6 @@ function makeShadowTexture() {
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
-
-function createMaterials() {
-  const knit = makeKnitTexture();
-  const fabric = (repeat: [number, number]) => {
-    const map = knit.clone();
-    map.repeat.set(...repeat);
-    map.needsUpdate = true;
-    return map;
-  };
-  const upperBump = fabric([46, 10]);
-  const materials = {
-    upper: new THREE.MeshPhysicalMaterial({
-      roughness: 0.82,
-      sheen: 0.6,
-      sheenRoughness: 0.55,
-      sheenColor: new THREE.Color("#5a5a5a"),
-      bumpMap: upperBump,
-      bumpScale: 1.4,
-    }),
-    shade: new THREE.MeshPhysicalMaterial({
-      roughness: 0.7,
-      sheen: 0.4,
-      sheenRoughness: 0.6,
-      sheenColor: new THREE.Color("#3a3a3a"),
-      side: THREE.DoubleSide,
-    }),
-    lining: new THREE.MeshStandardMaterial({ color: "#121215", roughness: 1, side: THREE.BackSide }),
-    accent: new THREE.MeshPhysicalMaterial({ roughness: 0.36, clearcoat: 0.35, clearcoatRoughness: 0.4 }),
-    midsole: new THREE.MeshStandardMaterial({ roughness: 0.58 }),
-    outsole: new THREE.MeshStandardMaterial({ roughness: 0.86 }),
-    laces: new THREE.MeshStandardMaterial({ roughness: 0.75 }),
-    hardware: new THREE.MeshStandardMaterial({ color: "#121214", metalness: 0.7, roughness: 0.32 }),
-    insole: new THREE.MeshStandardMaterial({ color: "#161618", roughness: 1 }),
-  };
-  return {
-    ...materials,
-    dispose() {
-      knit.dispose();
-      upperBump.dispose();
-      Object.values(materials).forEach((material) => material.dispose());
-    },
-  };
-}
-
-const ZONE_MATERIAL: Record<Zone, "upper" | "accent" | "midsole" | "outsole" | "laces"> = {
-  upper: "upper",
-  accent: "accent",
-  midsole: "midsole",
-  outsole: "outsole",
-  laces: "laces",
-};
-
-type Materials = ReturnType<typeof createMaterials>;
 
 /** Per-frame update, kept outside React: no state, only three.js objects. */
 function animateFrame(
@@ -123,7 +69,7 @@ function animateFrame(
     shadow: THREE.Mesh | null;
     shadowMaterial: THREE.MeshBasicMaterial | null;
   },
-  materials: Materials,
+  shoe: ShoeMaterial,
   targets: Record<Zone, THREE.Color>,
   pulse: { current: { zone: Zone; amount: number } | null },
   dt: number,
@@ -146,39 +92,38 @@ function animateFrame(
 
   const colorEase = reducedMotion ? 1 : 1 - Math.exp(-dt * 9);
   for (const zone of ZONES) {
-    const material = materials[ZONE_MATERIAL[zone]];
+    const color = shoe.colors[zone];
     const target = targets[zone];
-    if (material.color.equals(target)) continue;
-    material.color.lerp(target, colorEase);
-    const diff =
-      Math.abs(material.color.r - target.r) + Math.abs(material.color.g - target.g) + Math.abs(material.color.b - target.b);
-    if (diff < 0.002) material.color.copy(target);
+    if (color.equals(target)) continue;
+    color.lerp(target, colorEase);
+    const diff = Math.abs(color.r - target.r) + Math.abs(color.g - target.g) + Math.abs(color.b - target.b);
+    if (diff < 0.002) color.copy(target);
     else moving = true;
   }
-  materials.shade.color.copy(materials.upper.color).multiplyScalar(0.78);
 
-  for (const zone of ZONES) materials[ZONE_MATERIAL[zone]].emissive.setRGB(0, 0, 0);
   const p = pulse.current;
   if (p && p.amount > 0) {
     p.amount = Math.max(0, p.amount - dt * 1.6);
-    materials[ZONE_MATERIAL[p.zone]].emissive.setRGB(0.55 * p.amount, 0.03 * p.amount, 0.05 * p.amount);
+    shoe.setPulse(p.zone, p.amount * 0.6);
     moving = true;
+  } else {
+    shoe.setPulse(null, 0);
   }
   return moving;
 }
 
-function setTargets(targets: Record<Zone, THREE.Color>, colors: ShoeColors, materials: Materials, snap: boolean) {
-  for (const zone of ZONES) targets[zone].set(colors[zone]);
-  if (!snap) return;
-  for (const zone of ZONES) materials[ZONE_MATERIAL[zone]].color.copy(targets[zone]);
-  materials.shade.color.copy(targets.upper).multiplyScalar(0.78);
+function setTargets(targets: Record<Zone, THREE.Color>, colors: ShoeColors, shoe: ShoeMaterial, snap: boolean) {
+  for (const zone of ZONES) {
+    targets[zone].set(colors[zone]);
+    if (snap) shoe.colors[zone].copy(targets[zone]);
+  }
 }
 
 function frameCamera(camera: THREE.Camera, width: number, height: number, shoeHeight: number, fill: number) {
   const perspective = camera as THREE.PerspectiveCamera;
   const tan = Math.tan(THREE.MathUtils.degToRad(perspective.fov / 2));
   const aspect = width / Math.max(1, height);
-  const halfWidth = SHOE_LENGTH / 2 / fill;
+  const halfWidth = (SHOE_LENGTH + 0.1) / 2 / fill;
   const halfHeight = (shoeHeight / 2 + 0.25) / fill;
   const distance = Math.max(halfWidth / (tan * aspect), halfHeight / tan) + 1;
   perspective.position.set(0, distance * 0.16, distance);
@@ -191,7 +136,7 @@ function applyEnvironment(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
   const room = new RoomEnvironment();
   const env = pmrem.fromScene(room, 0.04).texture;
   scene.environment = env;
-  scene.environmentIntensity = 0.42;
+  scene.environmentIntensity = 0.7;
   return () => {
     scene.environment = null;
     env.dispose();
@@ -202,25 +147,27 @@ function applyEnvironment(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
   };
 }
 
-function setupRenderer(gl: THREE.WebGLRenderer, rig: Rig, invalidate: () => void, onError: () => void) {
+function setupRenderer(
+  gl: THREE.WebGLRenderer,
+  rig: Rig,
+  invalidate: () => void,
+  onError: () => void,
+  live: { current: boolean },
+) {
   gl.toneMapping = THREE.NeutralToneMapping;
-  gl.toneMappingExposure = 0.95;
+  gl.toneMappingExposure = 1;
   rig.connect(invalidate);
   gl.domElement.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
-    onError();
+    // R3F forces a context loss when it tears the renderer down; only a loss
+    // while this canvas is still meant to be on screen is a real failure.
+    if (live.current) onError();
   });
 }
 
-function Shoe({ colors, build, rig, reducedMotion, pulse, onReady, fill = 0.92 }: Omit<ShoeCanvasProps, "onError">) {
-  const geometry = useMemo(() => buildShoeGeometry(build), [build]);
-  // Centre the shoe vertically so low and high builds frame the same way.
-  const height = useMemo(() => {
-    geometry.upper.computeBoundingBox();
-    return geometry.upper.boundingBox!.max.y;
-  }, [geometry]);
-  const ground = -height / 2 - 0.04;
-  const materials = useMemo(() => createMaterials(), []);
+function Shoe({ colors, rig, reducedMotion, pulse, onReady, fill = 0.92, finish = "knit" }: Omit<ShoeCanvasProps, "onError">) {
+  const assets = use(loadShoeAssets());
+  const shoe = useMemo(() => createShoeMaterial(assets.maps), [assets]);
   const shadowTexture = useMemo(() => makeShadowTexture(), []);
   const targets = useMemo(() => Object.fromEntries(ZONES.map((zone) => [zone, new THREE.Color()])) as Record<Zone, THREE.Color>, []);
   const pitchGroup = useRef<THREE.Group>(null);
@@ -232,14 +179,17 @@ function Shoe({ colors, build, rig, reducedMotion, pulse, onReady, fill = 0.92 }
   const firstColors = useRef(true);
   const readySent = useRef(false);
   const { camera, size, invalidate } = useThree();
+  const height = assets.height;
+  const ground = -height / 2 - 0.04;
 
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  useEffect(() => () => {
-    materials.dispose();
-    shadowTexture.dispose();
-  }, [materials, shadowTexture]);
+  useEffect(
+    () => () => {
+      shoe.dispose();
+      shadowTexture.dispose();
+    },
+    [shoe, shadowTexture],
+  );
 
-  // Frame the shoe for any aspect ratio.
   useEffect(() => {
     frameCamera(camera, size.width, size.height, height, fill);
     invalidate();
@@ -247,10 +197,15 @@ function Shoe({ colors, build, rig, reducedMotion, pulse, onReady, fill = 0.92 }
 
   // New colours: ease towards them (or snap on first paint / reduced motion).
   useEffect(() => {
-    setTargets(targets, colors, materials, firstColors.current || reducedMotion);
+    setTargets(targets, colors, shoe, firstColors.current || reducedMotion);
     firstColors.current = false;
     invalidate();
-  }, [colors, targets, materials, reducedMotion, invalidate]);
+  }, [colors, targets, shoe, reducedMotion, invalidate]);
+
+  useEffect(() => {
+    shoe.setFinish(finish);
+    invalidate();
+  }, [finish, shoe, invalidate]);
 
   useEffect(() => {
     if (!pulse) return;
@@ -266,7 +221,7 @@ function Shoe({ colors, build, rig, reducedMotion, pulse, onReady, fill = 0.92 }
       shadow: shadow.current,
       shadowMaterial: shadowMaterial.current,
     };
-    const moving = animateFrame(rig, parts, materials, targets, pulseState, Math.min(delta, 0.05), state.clock.elapsedTime, reducedMotion);
+    const moving = animateFrame(rig, parts, shoe, targets, pulseState, Math.min(delta, 0.05), state.clock.elapsedTime, reducedMotion);
     if (moving) state.invalidate();
     if (!readySent.current) {
       readySent.current = true;
@@ -283,17 +238,7 @@ function Shoe({ colors, build, rig, reducedMotion, pulse, onReady, fill = 0.92 }
       <group ref={pitchGroup}>
         <group ref={yawGroup}>
           <group ref={floatGroup}>
-            <group position={[0, ground, 0]}>
-              <mesh geometry={geometry.upper} material={materials.upper} />
-              <mesh geometry={geometry.lining} material={materials.lining} />
-              <mesh geometry={geometry.shade} material={materials.shade} />
-              <mesh geometry={geometry.accent} material={materials.accent} />
-              <mesh geometry={geometry.midsole} material={materials.midsole} />
-              <mesh geometry={geometry.outsole} material={materials.outsole} />
-              <mesh geometry={geometry.laces} material={materials.laces} />
-              <mesh geometry={geometry.hardware} material={materials.hardware} />
-              <mesh geometry={geometry.insole} material={materials.insole} />
-            </group>
+            <mesh geometry={assets.geometry} material={shoe.material} position={[0, ground, 0]} />
           </group>
         </group>
       </group>
@@ -307,28 +252,38 @@ function Studio() {
 
   return (
     <>
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[3, 6, 5]} intensity={2.3} />
-      <directionalLight position={[0, -2, 5]} intensity={0.45} />
-      <directionalLight position={[-5, 2.5, -4]} intensity={3.2} color="#ff2638" />
-      <pointLight position={[3, 0.3, -2]} intensity={9} distance={8} decay={2} color="#ff3344" />
+      <hemisphereLight args={["#f4f2f0", "#1a0a0c", 0.4]} />
+      <directionalLight position={[2.5, 6, 4.5]} intensity={2.1} />
+      <directionalLight position={[-3.5, 3, 3]} intensity={0.6} color="#dfe6ff" />
+      <directionalLight position={[-5, 2.5, -4]} intensity={2.4} color="#ff2638" />
+      <pointLight position={[3, 0.3, -2]} intensity={6} distance={8} decay={2} color="#ff3344" />
     </>
   );
 }
 
 export default function ShoeCanvas({ onError, ...props }: ShoeCanvasProps) {
+  const live = useRef(false);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
+
   return (
     <Canvas
       frameloop="demand"
       dpr={[1, 1.75]}
       camera={{ fov: 28, near: 0.1, far: 60, position: [0, 1.4, 9] }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-      onCreated={({ gl, invalidate }) => setupRenderer(gl, props.rig, invalidate, onError)}
+      onCreated={({ gl, invalidate }) => setupRenderer(gl, props.rig, invalidate, onError, live)}
       style={{ pointerEvents: "none" }}
       aria-hidden
     >
       <Studio />
-      <Shoe {...props} />
+      <Suspense fallback={null}>
+        <Shoe {...props} />
+      </Suspense>
     </Canvas>
   );
 }

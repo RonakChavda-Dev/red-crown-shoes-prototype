@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { CUSTOM_BUILD, PRESETS } from "@/data/products";
-import { ShoeArt } from "@/components/shoe-art";
+import Image from "next/image";
+import { PRESETS } from "@/data/products";
+import { presetImage, SHOE_IMAGE } from "@/lib/shoe-images";
 import { XMark } from "@/components/logo";
 
 export const metadata: Metadata = {
   title: "Our approach",
-  description: "The design principles behind Red Tape, a fictional footwear label: fewer parts, a shape built around the foot, and colour left to you.",
+  description: "The design principles behind Red Crown, a fictional footwear label: fewer parts, a shape built around the foot, and colour left to you.",
 };
 
 const PRINCIPLES = [
@@ -37,10 +38,9 @@ const PROCESS = [
 ];
 
 export default function StoryPage() {
-  const ghost = PRESETS[1].colors;
   return (
     <>
-      <section className="shell grid items-end gap-10 pb-16 pt-12 sm:pt-16 lg:grid-cols-[1.1fr_1fr]">
+      <section className="shell page-top grid items-end gap-10 pb-[var(--space-section)] lg:grid-cols-[1.1fr_1fr]">
         <div>
           <p className="eyebrow fade-up text-signal">Our approach</p>
           <h1 className="display-xl mt-5">
@@ -54,22 +54,31 @@ export default function StoryPage() {
             </span>
           </h1>
           <p className="lede fade-up mt-8 max-w-xl" style={{ "--rise-delay": "250ms" } as React.CSSProperties}>
-            Red Tape is an imagined label: a design exercise in how far a sneaker can be simplified before it loses its
+            Red Crown is an imagined label: a design exercise in how far a sneaker can be simplified before it loses its
             character. These are the principles the collection was drawn around.
           </p>
         </div>
         <div className="fade-up relative" style={{ "--rise-delay": "300ms" } as React.CSSProperties}>
           <div aria-hidden className="absolute inset-x-[15%] bottom-[10%] top-1/3 rounded-full bg-signal/15 blur-3xl" />
-          <ShoeArt colors={ghost} build={CUSTOM_BUILD} title="A pared-back Red Tape runner in tonal white" className="relative w-full" />
+          <Image
+            src={presetImage(PRESETS[1].name)}
+            alt="A pared-back Red Crown runner in tonal white"
+            width={SHOE_IMAGE.width}
+            height={SHOE_IMAGE.height}
+            sizes="(min-width: 1024px) 45vw, 100vw"
+            preload
+            loading="eager"
+            className="relative h-auto w-full"
+          />
         </div>
       </section>
 
       <section id="principles" aria-labelledby="principles-title" className="border-y border-line bg-ink-2">
-        <div className="shell py-20 sm:py-28">
-          <h2 id="principles-title" className="eyebrow reveal text-dim">
+        <div className="shell section-y">
+          <h2 id="principles-title" className="eyebrow reveal text-signal">
             Four principles
           </h2>
-          <ol className="mt-8">
+          <ol className="mt-stack">
             {PRINCIPLES.map((item, i) => (
               <li
                 key={item.title}
@@ -84,7 +93,7 @@ export default function StoryPage() {
         </div>
       </section>
 
-      <section aria-labelledby="process-title" className="shell py-20 sm:py-28">
+      <section aria-labelledby="process-title" className="shell section-y">
         <div className="reveal max-w-2xl">
           <p className="eyebrow text-signal">The imagined process</p>
           <h2 id="process-title" className="display-lg mt-4">
@@ -94,7 +103,7 @@ export default function StoryPage() {
             A concept process, written the way we would want a real one to work. Four steps, always in the same order.
           </p>
         </div>
-        <ol className="mt-12 grid gap-px overflow-hidden rounded-[var(--radius-md)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-stack grid gap-px overflow-hidden rounded-[var(--radius-md)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
           {PROCESS.map((item, i) => (
             <li
               key={item.step}
@@ -112,14 +121,14 @@ export default function StoryPage() {
         </ol>
       </section>
 
-      <section aria-labelledby="reality-title" className="shell pb-24">
+      <section aria-labelledby="reality-title" className="shell page-bottom">
         <div className="reveal grid gap-8 rounded-[var(--radius-md)] border border-dashed border-line-strong p-8 sm:p-12 md:grid-cols-[1fr_auto] md:items-end">
           <div className="max-w-2xl">
             <h2 id="reality-title" className="eyebrow text-signal">
               A note on reality
             </h2>
             <p className="display-sm mt-4 normal-case leading-snug">
-              Red Tape doesn&apos;t exist. There is no factory, team or shop behind it.
+              Red Crown doesn&apos;t exist. There is no factory, team or shop behind it.
             </p>
             <p className="mt-4 text-mute">
               This site is a design prototype. Every product, name, price and process step is fictional, and nothing can

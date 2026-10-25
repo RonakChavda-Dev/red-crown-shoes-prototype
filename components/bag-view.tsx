@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Info, ShoppingBag, Trash2, X } from "lucide-react";
+import Image from "next/image";
 import { ShoeArt } from "@/components/shoe-art";
+import { SHOE_IMAGE } from "@/lib/shoe-images";
 import { QtyStepper } from "@/components/qty-stepper";
 import { bagCount, bagSubtotal, clearBag, removeFromBag, setQty, useBag } from "@/lib/bag";
 import { useHydrated } from "@/lib/local-store";
@@ -64,7 +66,11 @@ export function BagView() {
                 className="grid grid-cols-[6.5rem_1fr] gap-4 overflow-hidden py-6 sm:grid-cols-[10rem_1fr] sm:gap-6"
               >
                 <Link href={line.href} className="rounded-[var(--radius-sm)] bg-surface p-2" tabIndex={-1} aria-hidden>
-                  <ShoeArt colors={line.colors} build={line.build} shadow={false} className="w-full" />
+                  {line.image ? (
+                    <Image src={line.image} alt="" width={SHOE_IMAGE.width} height={SHOE_IMAGE.height} sizes="10rem" className="h-auto w-full" />
+                  ) : (
+                    <ShoeArt colors={line.colors} build={line.build} shadow={false} className="w-full" />
+                  )}
                 </Link>
                 <div className="flex min-w-0 flex-col gap-3">
                   <div className="flex items-start justify-between gap-4">
@@ -171,7 +177,7 @@ export function BagView() {
           </div>
           <div id="checkout-body" className="mt-4 space-y-3 text-mute">
             <p>
-              Red Tape is a fictional label and this storefront is a design prototype. There is no checkout: no order is
+              Red Crown is a fictional label and this storefront is a design prototype. There is no checkout: no order is
               placed, no payment is taken and no personal details are collected.
             </p>
             <p>

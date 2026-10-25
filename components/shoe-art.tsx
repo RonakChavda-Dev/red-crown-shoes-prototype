@@ -2,7 +2,7 @@ import { useId } from "react";
 import type { Build, ShoeColors, Zone } from "@/data/products";
 
 /**
- * Original, unbranded side-profile illustration of a Red Tape shoe.
+ * Original, unbranded side-profile illustration of a Red Crown shoe.
  * Shares the colour zones and build options of the 3D model, so it doubles
  * as product imagery, the 3D poster and the no-WebGL fallback.
  */
@@ -219,7 +219,9 @@ export function ShoeArt({ colors, build, title, focus = null, className, shadow 
       {/* Upper and everything stitched onto it */}
       <g style={zoneStyle("upper")}>
         <path d={UPPER[collar]} fill={colors.upper} />
-        <path d={LINING[collar]} fill="#0b0b0c" />
+        {/* Lining: the upper's colour in shadow, matching the 3D shoe */}
+        <path d={LINING[collar]} fill={colors.upper} />
+        <path d={LINING[collar]} fill="#000" fillOpacity=".18" />
         <g clipPath={`url(#${id("upper")})`}>
           <rect x="0" y="0" width="620" height="320" fill={`url(#${id("knit")})`} />
           <path d={TOE_CAP} fill="#000" fillOpacity=".12" />

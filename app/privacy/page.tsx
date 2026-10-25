@@ -3,13 +3,13 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy & demo notice",
-  description: "Red Tape is a concept demo. It does not sell anything, process payments or collect personal data.",
+  description: "Red Crown is a concept demo. It does not sell anything, process payments or collect personal data.",
 };
 
 const ITEMS = [
   {
     title: "Nothing is for sale",
-    body: "Red Tape is a fictional label. Products, names, prices and copy were created for this design prototype. The checkout explains this and does not complete an order.",
+    body: "Red Crown is a fictional label. Products, names, prices and copy were created for this design prototype. The checkout explains this and does not complete an order.",
   },
   {
     title: "No payments, no accounts",
@@ -20,6 +20,10 @@ const ITEMS = [
     body: "Your demo bag and customizer draft are saved in your browser's local storage so they survive a refresh. They never leave your device. Clear them from the bag and customizer pages, or by clearing this site's data in your browser.",
   },
   {
+    title: "Credits",
+    body: "The 3D shoe is based on “Materials Variants Shoe” © 2021 Shopify, licensed under CC BY 4.0 and published in the Khronos glTF sample assets. It was modified for this site: the original colourways were removed, small marks were painted out, and the surfaces are recoloured live by zone. All Red Crown names, colourways and copy are original to this concept.",
+  },
+  {
     title: "No tracking",
     body: "The site does not use analytics, advertising cookies or third-party trackers. Fonts are bundled with the site at build time.",
   },
@@ -27,8 +31,8 @@ const ITEMS = [
 
 export default function PrivacyPage() {
   return (
-    <div className="shell pb-24">
-      <header className="max-w-3xl py-12 sm:py-16">
+    <div className="shell page-bottom">
+      <header className="page-head max-w-3xl">
         <p className="eyebrow fade-up text-signal">About this site</p>
         <h1 className="display-lg mt-4">
           <span className="rise-line">

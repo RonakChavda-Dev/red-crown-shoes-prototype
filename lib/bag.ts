@@ -1,4 +1,5 @@
 import { createLocalStore, useLocalStore } from "@/lib/local-store";
+import { productImage } from "@/lib/shoe-images";
 import { parseColors, type Build, type Colorway, type Product, type ShoeColors } from "@/data/products";
 
 export const MAX_QTY = 10;
@@ -15,6 +16,8 @@ export interface BagLine {
   colors: ShoeColors;
   build: Build;
   href: string;
+  /** Pre-rendered still for catalogue pairs; custom builds use the illustration. */
+  image?: string;
 }
 
 function parseLine(raw: unknown): BagLine | null {
@@ -37,7 +40,7 @@ function parseLine(raw: unknown): BagLine | null {
     id: line.id,
     kind: line.kind,
     name: line.name,
-    code: typeof line.code === "string" ? line.code : "RT",
+    code: typeof line.code === "string" ? line.code : "RC",
     variant: typeof line.variant === "string" ? line.variant : "",
     size: line.size,
     qty: Math.min(MAX_QTY, Math.max(1, Math.round(line.qty))),
@@ -45,6 +48,7 @@ function parseLine(raw: unknown): BagLine | null {
     colors,
     build: line.build,
     href: typeof line.href === "string" && line.href.startsWith("/") ? line.href : "/shop",
+    image: typeof line.image === "string" && line.image.startsWith("/images/") ? line.image : undefined,
   };
 }
 
@@ -102,5 +106,6 @@ export function productLine(product: Product, colorway: Colorway, size: string):
     colors: colorway.colors,
     build: product.build,
     href: `/product/${product.slug}?colorway=${colorway.id}`,
+    image: productImage(product.slug, colorway.id),
   };
 }

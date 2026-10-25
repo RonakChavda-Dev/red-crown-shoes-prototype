@@ -11,6 +11,7 @@ import { QtyStepper } from "@/components/qty-stepper";
 import { addToBag, productLine } from "@/lib/bag";
 import { toast } from "@/lib/toast";
 import { cn, formatPrice } from "@/lib/format";
+import { productImage } from "@/lib/shoe-images";
 
 export function ProductViewWithParams({ product }: { product: Product }) {
   const params = useSearchParams();
@@ -62,6 +63,8 @@ export function ProductView({ product, initialColorway = null }: { product: Prod
               label={`${product.name} in ${colorway.name}`}
               className="aspect-[4/3] w-full sm:aspect-[16/11]"
               fill={0.9}
+              poster={productImage(product.slug, colorway.id)}
+              priority
             />
           </div>
         </ViewTransition>

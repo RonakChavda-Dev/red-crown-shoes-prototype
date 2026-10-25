@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { CUSTOM_BUILD, PRESETS } from "@/data/products";
-import { ShoeArt } from "@/components/shoe-art";
+import Image from "next/image";
+import { PRESETS } from "@/data/products";
+import { presetImage, SHOE_IMAGE } from "@/lib/shoe-images";
 
 /** A taste of the customizer: switch between preset builds instantly. */
 export function PresetPreview() {
@@ -57,7 +58,14 @@ export function PresetPreview() {
           className="absolute inset-x-[10%] bottom-[10%] top-1/3 rounded-full bg-signal/15 blur-3xl"
         />
         <div key={preset.name} className="preset-swap relative">
-          <ShoeArt colors={preset.colors} build={CUSTOM_BUILD} title={`Preview of the ${preset.name} preset`} className="w-full" />
+          <Image
+            src={presetImage(preset.name)}
+            alt={`The ${preset.name} preset rendered on the Red Crown runner`}
+            width={SHOE_IMAGE.width}
+            height={SHOE_IMAGE.height}
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            className="h-auto w-full"
+          />
         </div>
       </div>
     </div>

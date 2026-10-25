@@ -37,7 +37,7 @@ export function SiteHeader() {
         Skip to content
       </a>
       <div className="shell flex h-[var(--header-h)] items-center justify-between gap-6">
-        <Link href="/" aria-label="Red Tape home" className="-m-2 rounded-[var(--radius-xs)] p-2">
+        <Link href="/" aria-label="Red Crown home" className="-m-2 rounded-[var(--radius-xs)] p-2">
           <Wordmark />
         </Link>
 
@@ -81,7 +81,7 @@ export function SiteHeader() {
       >
         <div className="shell flex h-full flex-col">
           <div className="flex h-[var(--header-h)] items-center justify-between">
-            <Link href="/" onNavigate={closeMenu} aria-label="Red Tape home">
+            <Link href="/" onNavigate={closeMenu} aria-label="Red Crown home">
               <Wordmark />
             </Link>
             <button
@@ -113,7 +113,7 @@ export function SiteHeader() {
               ))}
             </ul>
           </nav>
-          <p className="eyebrow pb-8 text-dim">Red Tape is a fictional concept label.</p>
+          <p className="eyebrow pb-8 text-dim">Red Crown is a fictional concept label.</p>
         </div>
       </dialog>
     </header>

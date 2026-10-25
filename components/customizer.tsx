@@ -1,60 +1,75 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
-import { AlertCircle, Check, RotateCcw, Shuffle, ShoppingBag } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Check, ClipboardCopy, RotateCcw, Shuffle } from "lucide-react";
 import {
   CUSTOM_BUILD,
-  CUSTOM_PRICE,
   DEFAULT_CUSTOM,
+  FINISHES,
   PALETTE,
   PRESETS,
-  SIZES,
   ZONES,
   ZONE_INFO,
   colorName,
   parseColors,
+  type Finish,
   type ShoeColors,
   type Zone,
 } from "@/data/products";
 import { ShoeStage } from "@/components/shoe/shoe-stage";
 import { ZONE_VIEWS } from "@/components/shoe/rig";
 import { isLightColor } from "@/components/shoe-art";
+import { ColorPicker } from "@/components/color-picker";
 import { createLocalStore, useLocalStore } from "@/lib/local-store";
-import { addToBag } from "@/lib/bag";
+import { normalizeHex } from "@/lib/color";
 import { toast } from "@/lib/toast";
-import { cn, formatPrice } from "@/lib/format";
+import { cn } from "@/lib/format";
+import { presetImageFor } from "@/lib/shoe-images";
 
 interface Draft {
   colors: ShoeColors;
+  finish: Finish;
   name: string;
+  recent: string[];
 }
 
-const draftStore = createLocalStore<Draft>("redtape:custom-draft:v1", { colors: DEFAULT_CUSTOM, name: "" }, (raw) => {
+const FALLBACK: Draft = { colors: DEFAULT_CUSTOM, finish: "knit", name: "", recent: [] };
+const isFinish = (value: unknown): value is Finish => FINISHES.some((f) => f.id === value);
+
+const draftStore = createLocalStore<Draft>("redtape:custom-draft:v2", FALLBACK, (raw) => {
   if (!raw || typeof raw !== "object") return null;
   const draft = raw as Partial<Draft>;
   const colors = parseColors(draft.colors);
   if (!colors) return null;
-  return { colors, name: typeof draft.name === "string" ? draft.name.slice(0, 24) : "" };
+  return {
+    colors,
+    finish: isFinish(draft.finish) ? draft.finish : "knit",
+    name: typeof draft.name === "string" ? draft.name.slice(0, 24) : "",
+    recent: Array.isArray(draft.recent)
+      ? draft.recent.map((hex) => (typeof hex === "string" ? normalizeHex(hex) : null)).filter((hex): hex is string => !!hex).slice(0, 8)
+      : [],
+  };
 });
 
 const sameColors = (a: ShoeColors, b: ShoeColors) => ZONES.every((zone) => a[zone].toLowerCase() === b[zone].toLowerCase());
+const finishLabel = (finish: Finish) => FINISHES.find((f) => f.id === finish)!.label;
 
 export function Customizer() {
   const draft = useLocalStore(draftStore);
-  const { colors, name } = draft;
+  const { colors, finish, name, recent } = draft;
   const [zone, setZone] = useState<Zone>("upper");
   const [view, setView] = useState<{ yaw: number; pitch: number; key: number } | null>(null);
   const [pulse, setPulse] = useState<{ zone: Zone; key: number } | null>(null);
-  const [size, setSize] = useState<string | null>(null);
-  const [sizeError, setSizeError] = useState(false);
-  const sizeGroup = useRef<HTMLDivElement>(null);
-  // Monotonic keys so repeated requests (same zone twice) still re-apply.
   const ticket = useRef(0);
-  const nextKey = () => ++ticket.current;
-  const ids = { palette: useId(), custom: useId(), name: useId(), size: useId(), sizeError: useId() };
+  const recentTimer = useRef<number | undefined>(undefined);
+  const ids = { palette: useId(), name: useId(), finish: useId() };
 
-  const isDefault = sameColors(colors, DEFAULT_CUSTOM) && name === "";
+  useEffect(() => () => window.clearTimeout(recentTimer.current), []);
+
+  const nextKey = () => ++ticket.current;
+  const isDefault = sameColors(colors, DEFAULT_CUSTOM) && finish === "knit" && name === "";
   const activePreset = PRESETS.find((preset) => sameColors(preset.colors, colors));
+  const current = colors[zone];
 
   const selectZone = (next: Zone) => {
     setZone(next);
@@ -62,95 +77,92 @@ export function Customizer() {
   };
 
   const paint = (hex: string) => {
-    draftStore.set((current) => ({ ...current, colors: { ...current.colors, [zone]: hex } }));
+    draftStore.set((d) => ({ ...d, colors: { ...d.colors, [zone]: hex.toUpperCase() } }));
     setPulse({ zone, key: nextKey() });
   };
 
+  /** Custom colours land in "Recent" once the person settles on them. */
+  const paintCustom = (hex: string) => {
+    paint(hex);
+    window.clearTimeout(recentTimer.current);
+    recentTimer.current = window.setTimeout(() => {
+      const value = hex.toUpperCase();
+      if (PALETTE.some((swatch) => swatch.hex === value)) return;
+      draftStore.set((d) => ({ ...d, recent: [value, ...d.recent.filter((c) => c !== value)].slice(0, 8) }));
+    }, 700);
+  };
+
   const applyColors = (next: ShoeColors) => {
-    draftStore.set((current) => ({ ...current, colors: next }));
+    draftStore.set((d) => ({ ...d, colors: next }));
     setView({ ...ZONE_VIEWS.upper, key: nextKey() });
   };
 
   const randomize = () => {
     const pick = () => PALETTE[Math.floor(Math.random() * PALETTE.length)].hex;
-    const next = Object.fromEntries(ZONES.map((z) => [z, pick()])) as ShoeColors;
-    applyColors(next);
+    applyColors(Object.fromEntries(ZONES.map((z) => [z, pick()])) as ShoeColors);
   };
 
   const reset = () => {
     draftStore.reset();
     setZone("upper");
-    setSize(null);
-    setSizeError(false);
     setView({ ...ZONE_VIEWS.upper, key: nextKey() });
     toast({ title: "Design reset", description: "Back to the Signal starting point. Your saved draft was cleared." });
   };
 
-  const add = () => {
-    if (!size) {
-      setSizeError(true);
-      sizeGroup.current?.querySelector("button")?.focus();
-      return;
+  const copySpec = async () => {
+    const lines = [
+      name.trim() || "Red Crown custom build",
+      `Finish: ${finishLabel(finish)}`,
+      ...ZONES.map((z) => `${ZONE_INFO[z].label}: ${colorName(colors[z])} (${colors[z].toUpperCase()})`),
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      toast({ title: "Colour spec copied", description: "Paste it anywhere to keep or share your build." });
+    } catch {
+      toast({ title: "Couldn't copy", description: "Your browser blocked clipboard access." });
     }
-    const title = name.trim() || "Custom build";
-    addToBag({
-      id: `custom:${ZONES.map((z) => colors[z].slice(1)).join("")}:${name.trim()}:${size}`,
-      kind: "custom",
-      name: title,
-      code: "RT-CX",
-      variant: `${colorName(colors.upper)} upper, ${colorName(colors.accent)} tape`,
-      size,
-      unitPrice: CUSTOM_PRICE,
-      colors,
-      build: CUSTOM_BUILD,
-      href: "/customize",
-    });
-    toast({ title: "Added to bag", description: `${title} · US ${size}`, action: { label: "View bag", href: "/bag" } });
   };
 
-  const current = colors[zone];
-
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(22rem,1fr)] lg:gap-12">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(23rem,1fr)] lg:gap-12">
       {/* Preview */}
       <div className="sticky top-[var(--header-h)] z-20 -mx-[var(--gutter)] border-b border-line bg-ink/95 backdrop-blur lg:top-[calc(var(--header-h)+1.5rem)] lg:mx-0 lg:self-start lg:border-0 lg:bg-transparent lg:backdrop-blur-none">
         <div className="relative lg:overflow-hidden lg:rounded-[var(--radius-md)] lg:border lg:border-line lg:bg-surface">
           <ShoeStage
             colors={colors}
             build={CUSTOM_BUILD}
-            label={`Your custom pair: ${ZONES.map((z) => `${ZONE_INFO[z].label} ${colorName(colors[z])}`).join(", ")}`}
+            finish={finish}
+            label={`Your custom pair in ${finishLabel(finish).toLowerCase()}: ${ZONES.map((z) => `${ZONE_INFO[z].label} ${colorName(colors[z])}`).join(", ")}`}
             view={view}
             pulse={pulse}
             fill={0.9}
             glow="strong"
-            className="h-[34svh] min-h-56 w-full lg:aspect-[5/4] lg:h-auto"
+            poster={presetImageFor(colors)}
+            priority
+            className="h-[36svh] min-h-60 w-full lg:aspect-[5/4] lg:h-auto"
           />
-          <p className="eyebrow pointer-events-none absolute left-4 top-4 hidden text-dim lg:block">
-            Editing · <span className="text-paper">{ZONE_INFO[zone].label}</span>
-          </p>
+          <div className="pointer-events-none absolute left-4 right-4 top-4 hidden items-start justify-between lg:flex">
+            <p className="eyebrow text-dim">
+              Editing · <span className="text-paper">{ZONE_INFO[zone].label}</span>
+            </p>
+            <p className="eyebrow text-dim">{finishLabel(finish)}</p>
+          </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="space-y-8">
-        <div>
+      <div className="space-y-10">
+        <header>
           <p className="eyebrow text-signal">Build your pair</p>
-          <h1 className="display-lg mt-3">Make it yours</h1>
-          <p className="mt-4 text-mute">
-            Based on the Strand runner. Choose a zone, then a colour: the preview updates as you go and your draft is
-            saved in this browser.
+          <h1 className="display-lg mt-4">Make it yours</h1>
+          <p className="mt-5 text-mute">
+            Based on the Strand runner. Choose a zone, then a colour and a finish. The preview updates as you go, and
+            your design is saved in this browser.
           </p>
-          <p className="mt-4 flex items-baseline gap-3">
-            <span className="font-mono text-xl">{formatPrice(CUSTOM_PRICE)}</span>
-            <span className="eyebrow text-dim">Concept price</span>
-          </p>
-        </div>
+        </header>
 
-        <section aria-labelledby="presets-title">
-          <h2 id="presets-title" className="eyebrow text-dim">
-            Start from a preset
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
+        <Step title="Start from a preset">
+          <div className="flex flex-wrap gap-2">
             {PRESETS.map((preset) => (
               <button
                 key={preset.name}
@@ -168,13 +180,10 @@ export function Customizer() {
               </button>
             ))}
           </div>
-        </section>
+        </Step>
 
-        <section aria-labelledby="zones-title" className="border-t border-line pt-6">
-          <h2 id="zones-title" className="eyebrow text-dim">
-            1 · Choose a zone
-          </h2>
-          <div role="group" aria-labelledby="zones-title" className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+        <Step index={1} title="Choose a zone">
+          <div role="group" aria-label="Zone" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {ZONES.map((item) => (
               <button
                 key={item}
@@ -182,28 +191,22 @@ export function Customizer() {
                 aria-pressed={zone === item}
                 onClick={() => selectZone(item)}
                 className={cn(
-                  "flex min-h-12 items-center gap-3 rounded-[var(--radius-xs)] border px-3 text-left text-[0.9rem] transition-colors",
+                  "flex min-h-14 items-center gap-3 rounded-[var(--radius-sm)] border px-3 text-left transition-colors",
                   zone === item ? "border-paper bg-surface-2" : "border-line hover:border-line-strong",
                 )}
               >
                 <span aria-hidden className="size-5 shrink-0 rounded-full ring-1 ring-white/20" style={{ background: colors[item] }} />
                 <span className="min-w-0">
-                  <span className="block font-semibold leading-tight">{ZONE_INFO[item].label}</span>
-                  <span className="block truncate text-[0.75rem] text-dim">{colorName(colors[item])}</span>
+                  <span className="block text-[0.9rem] font-semibold leading-tight">{ZONE_INFO[item].label}</span>
+                  <span className="mt-0.5 block truncate text-[0.75rem] text-dim">{colorName(colors[item])}</span>
                 </span>
               </button>
             ))}
           </div>
-        </section>
+        </Step>
 
-        <section aria-labelledby={ids.palette} className="border-t border-line pt-6">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 id={ids.palette} className="eyebrow text-dim">
-              2 · Colour for {ZONE_INFO[zone].label.toLowerCase()}
-            </h2>
-            <p className="text-[0.85rem] text-mute">{ZONE_INFO[zone].hint}</p>
-          </div>
-          <div role="group" aria-labelledby={ids.palette} className="mt-3 grid grid-cols-7 gap-1.5">
+        <Step index={2} title={`Colour for ${ZONE_INFO[zone].label.toLowerCase()}`} aside={ZONE_INFO[zone].hint} id={ids.palette}>
+          <div role="group" aria-labelledby={ids.palette} className="grid grid-cols-7 gap-2">
             {PALETTE.map((swatch) => {
               const selected = swatch.hex.toLowerCase() === current.toLowerCase();
               return (
@@ -215,7 +218,7 @@ export function Customizer() {
                   title={swatch.name}
                   onClick={() => paint(swatch.hex)}
                   className={cn(
-                    "relative grid aspect-square min-h-11 place-items-center rounded-[var(--radius-xs)] ring-1 ring-inset ring-white/15 transition-transform duration-200 hover:scale-[1.06]",
+                    "grid aspect-square min-h-11 place-items-center rounded-full ring-1 ring-inset ring-white/15 transition-transform duration-200 hover:scale-[1.08]",
                     selected && "ring-2 ring-paper ring-offset-2 ring-offset-ink",
                   )}
                   style={{ background: swatch.hex }}
@@ -225,53 +228,57 @@ export function Customizer() {
               );
             })}
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <label htmlFor={ids.custom} className="flex items-center gap-3 text-[0.9rem]">
-              <span className="relative grid size-11 place-items-center overflow-hidden rounded-[var(--radius-xs)] ring-1 ring-inset ring-line-strong">
-                <input
-                  id={ids.custom}
-                  type="color"
-                  value={current}
-                  onChange={(event) => paint(event.target.value)}
-                  className="absolute inset-0 size-full cursor-pointer opacity-0"
-                />
-                <span aria-hidden className="size-6 rounded-full" style={{ background: current }} />
-              </span>
-              Custom colour
-            </label>
-            <p className="text-[0.9rem]" aria-live="polite">
-              <span className="text-mute">{ZONE_INFO[zone].label}: </span>
+          <p className="mt-4 flex items-baseline justify-between gap-3 text-[0.9rem]" aria-live="polite">
+            <span className="text-mute">{ZONE_INFO[zone].label}</span>
+            <span>
               {colorName(current)} <span className="font-mono text-dim">{current.toUpperCase()}</span>
-            </p>
+            </span>
+          </p>
+          <div className="mt-5">
+            <ColorPicker value={current} onChange={paintCustom} recent={recent} label={ZONE_INFO[zone].label} />
           </div>
-        </section>
+        </Step>
 
-        <section aria-labelledby="summary-title" className="border-t border-line pt-6">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="summary-title" className="eyebrow text-dim">
-              3 · Your design
-            </h2>
-            <div className="flex gap-1">
-              <button type="button" onClick={randomize} className="btn btn-quiet min-h-11 px-3 text-[0.82rem]">
+        <Step index={3} title="Upper finish" id={ids.finish}>
+          <div role="group" aria-labelledby={ids.finish} className="grid gap-2 sm:grid-cols-3">
+            {FINISHES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={finish === item.id}
+                onClick={() => {
+                  draftStore.set((d) => ({ ...d, finish: item.id }));
+                  setView({ ...ZONE_VIEWS.upper, key: nextKey() });
+                  setPulse({ zone: "upper", key: nextKey() });
+                }}
+                className={cn(
+                  "rounded-[var(--radius-sm)] border p-3.5 text-left transition-colors",
+                  finish === item.id ? "border-paper bg-surface-2" : "border-line hover:border-line-strong",
+                )}
+              >
+                <span className={cn("finish-swatch block h-10 rounded-[var(--radius-xs)]", `finish-${item.id}`)} style={{ "--c": colors.upper } as React.CSSProperties} />
+                <span className="mt-3 block text-[0.9rem] font-semibold">{item.label}</span>
+                <span className="mt-0.5 block text-[0.78rem] leading-snug text-dim">{item.note}</span>
+              </button>
+            ))}
+          </div>
+        </Step>
+
+        <Step
+          index={4}
+          title="Your design"
+          aside={
+            <span className="flex gap-1.5">
+              <button type="button" onClick={randomize} className="btn btn-quiet min-h-10 px-3 text-[0.8rem]">
                 <Shuffle className="size-4" /> Randomize
               </button>
-              <button type="button" onClick={reset} disabled={isDefault} className="btn btn-quiet min-h-11 px-3 text-[0.82rem] disabled:opacity-40">
+              <button type="button" onClick={reset} disabled={isDefault} className="btn btn-quiet min-h-10 px-3 text-[0.8rem] disabled:opacity-40">
                 <RotateCcw className="size-4" /> Reset
               </button>
-            </div>
-          </div>
-          <dl className="mt-3 divide-y divide-line rounded-[var(--radius-sm)] border border-line bg-surface">
-            {ZONES.map((item) => (
-              <div key={item} className="flex items-center justify-between gap-3 px-4 py-3">
-                <dt className="text-[0.9rem] text-mute">{ZONE_INFO[item].label}</dt>
-                <dd className="flex items-center gap-2.5 text-[0.9rem]">
-                  {colorName(colors[item])}
-                  <span aria-hidden className="size-4 rounded-full ring-1 ring-white/20" style={{ background: colors[item] }} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <div className="mt-4">
+            </span>
+          }
+        >
+          <div>
             <label htmlFor={ids.name} className="eyebrow text-dim">
               Name your build <span className="normal-case tracking-normal">(optional)</span>
             </label>
@@ -285,48 +292,56 @@ export function Customizer() {
               className="field mt-2 w-full placeholder:text-dim"
             />
           </div>
-        </section>
-
-        <section aria-labelledby={ids.size} className="border-t border-line pt-6">
-          <h2 id={ids.size} className="eyebrow text-dim">
-            4 · Size · US
-          </h2>
-          <div
-            ref={sizeGroup}
-            role="group"
-            aria-labelledby={ids.size}
-            aria-describedby={sizeError ? ids.sizeError : undefined}
-            className="mt-3 grid grid-cols-6 gap-1.5"
-          >
-            {SIZES.map((item) => (
-              <button
-                key={item}
-                type="button"
-                aria-pressed={size === item}
-                onClick={() => {
-                  setSize(item);
-                  setSizeError(false);
-                }}
-                className={cn(
-                  "h-11 rounded-[var(--radius-xs)] border font-mono text-[0.85rem] transition-colors",
-                  size === item ? "border-paper bg-paper text-ink" : sizeError ? "border-signal/70" : "border-line-strong hover:border-mute",
-                )}
-              >
-                {item}
-              </button>
+          <dl className="mt-4 divide-y divide-line rounded-[var(--radius-sm)] border border-line bg-surface">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <dt className="text-[0.9rem] text-mute">Finish</dt>
+              <dd className="text-[0.9rem]">{finishLabel(finish)}</dd>
+            </div>
+            {ZONES.map((item) => (
+              <div key={item} className="flex items-center justify-between gap-3 px-4 py-3">
+                <dt className="text-[0.9rem] text-mute">{ZONE_INFO[item].label}</dt>
+                <dd className="flex items-center gap-2.5 text-[0.9rem]">
+                  {colorName(colors[item])}
+                  <span aria-hidden className="size-4 rounded-full ring-1 ring-white/20" style={{ background: colors[item] }} />
+                </dd>
+              </div>
             ))}
-          </div>
-          {sizeError && (
-            <p id={ids.sizeError} role="alert" className="mt-3 flex items-center gap-2 text-[0.9rem] text-signal-hot">
-              <AlertCircle className="size-4" /> Choose a size before adding your build.
-            </p>
-          )}
-          <button type="button" onClick={add} className="btn btn-primary mt-5 w-full">
-            <ShoppingBag className="size-4" strokeWidth={2} /> Add custom pair · {formatPrice(CUSTOM_PRICE)}
+          </dl>
+          <button type="button" onClick={copySpec} className="btn btn-ghost mt-4 w-full">
+            <ClipboardCopy className="size-4" /> Copy colour spec
           </button>
-          <p className="mt-3 text-[0.82rem] text-dim">Concept demo: nothing is produced, ordered or charged.</p>
-        </section>
+          <p className="mt-3 text-[0.82rem] text-dim">A concept showcase: designs stay in your browser and nothing is produced.</p>
+        </Step>
       </div>
     </div>
+  );
+}
+
+function Step({
+  index,
+  title,
+  aside,
+  id,
+  children,
+}: {
+  index?: number;
+  title: string;
+  aside?: React.ReactNode;
+  id?: string;
+  children: React.ReactNode;
+}) {
+  const autoId = useId();
+  const headingId = id ?? autoId;
+  return (
+    <section aria-labelledby={headingId} className="border-t border-line pt-6">
+      <div className="mb-4 flex min-h-10 items-center justify-between gap-4">
+        <h2 id={headingId} className="eyebrow text-dim">
+          {index !== undefined && <span className="text-signal">0{index} · </span>}
+          {title}
+        </h2>
+        {typeof aside === "string" ? <p className="text-right text-[0.82rem] text-mute">{aside}</p> : aside}
+      </div>
+      {children}
+    </section>
   );
 }

@@ -5,13 +5,14 @@ import { useRef, useState, ViewTransition } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Plus, X } from "lucide-react";
 import { CATEGORIES, SIZES, getColorway, type Product } from "@/data/products";
-import { ShoeArt } from "@/components/shoe-art";
+import Image from "next/image";
+import { productImage, SHOE_IMAGE } from "@/lib/shoe-images";
 import { ColorwayDot } from "@/components/colorway-dot";
 import { addToBag, productLine } from "@/lib/bag";
 import { toast } from "@/lib/toast";
 import { cn, formatPrice } from "@/lib/format";
 
-export function ProductCard({ product, className }: { product: Product; className?: string }) {
+export function ProductCard({ product, className, eager }: { product: Product; className?: string; eager?: boolean }) {
   const [colorwayId, setColorwayId] = useState(product.colorways[0].id);
   const [picking, setPicking] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -54,7 +55,16 @@ export function ProductCard({ product, className }: { product: Product; classNam
         />
         <ViewTransition name={`shoe-${product.slug}`} share="morph" default="none">
           <div className="relative transition-transform duration-500 ease-[var(--ease-out-expo)] group-hover/card:-translate-y-2 group-hover/card:-rotate-[4deg] group-has-[:focus-visible]/card:-translate-y-2 group-has-[:focus-visible]/card:-rotate-[4deg]">
-            <ShoeArt colors={colorway.colors} build={product.build} className="aspect-[2/1] w-full" />
+            <Image
+              src={productImage(product.slug, colorway.id)}
+              alt={`${product.name} in ${colorway.name}`}
+              width={SHOE_IMAGE.width}
+              height={SHOE_IMAGE.height}
+              sizes="(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw"
+              loading={eager ? "eager" : "lazy"}
+              preload={eager}
+              className="h-auto w-full"
+            />
           </div>
         </ViewTransition>
       </div>

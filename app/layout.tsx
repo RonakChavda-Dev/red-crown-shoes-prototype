@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/toaster";
 import { RevealObserver } from "@/components/reveal-observer";
+import { LoadingScreen } from "@/components/loading-screen";
 import "./globals.css";
 
 const anton = Anton({ variable: "--font-anton", weight: "400", subsets: ["latin"], display: "swap" });
@@ -13,12 +14,12 @@ const geist = Geist({ variable: "--font-geist", subsets: ["latin"], display: "sw
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Red Tape — Concept footwear", template: "%s · Red Tape" },
+  title: { default: "Red Crown — Concept footwear", template: "%s · Red Crown" },
   description:
-    "Red Tape is a fictional footwear label: a concept storefront with an interactive 3D shoe, a collection and a live shoe customizer.",
-  applicationName: "Red Tape",
+    "Red Crown is a fictional footwear label: a concept storefront with an interactive 3D shoe, a collection and a live shoe customizer.",
+  applicationName: "Red Crown",
   openGraph: {
-    title: "Red Tape — Concept footwear",
+    title: "Red Crown — Concept footwear",
     description: "A fictional footwear label and design prototype. Nothing here is for sale.",
     type: "website",
   },
@@ -29,7 +30,8 @@ export const viewport: Viewport = { themeColor: "#080808", colorScheme: "dark" }
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${anton.variable} ${geist.variable} ${geistMono.variable}`}>
-      <body className="flex min-h-dvh flex-col">
+      <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
+        <LoadingScreen />
         <MotionConfig reducedMotion="user">
           <SiteHeader />
           <ViewTransition default="none" update="page">

@@ -97,7 +97,7 @@ function Catalog({ params }: { params: URLSearchParams | ReturnType<typeof useSe
       {results.length > 0 ? (
         <motion.ul layout className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout" initial={false}>
-            {results.map((product) => (
+            {results.map((product, i) => (
               <motion.li
                 key={product.slug}
                 layout
@@ -107,7 +107,7 @@ function Catalog({ params }: { params: URLSearchParams | ReturnType<typeof useSe
                 transition={{ type: "spring", stiffness: 380, damping: 36 }}
                 className="flex"
               >
-                <ProductCard product={product} className="w-full" />
+                <ProductCard product={product} className="w-full" eager={i < 3} />
               </motion.li>
             ))}
           </AnimatePresence>

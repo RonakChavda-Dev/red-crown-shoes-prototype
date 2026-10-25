@@ -1,8 +1,8 @@
-# Red Tape Shoes — Project Guide for Claude Code
+# Red Crown Shoes — Project Guide for Claude Code
 
 ## Project goal
 
-Build a polished, responsive, multi-page concept storefront for **Red Tape Shoes**, an entirely fictional footwear label. This repository currently contains visual references in `inspirations/` and no application code. Begin by inspecting the repository and the inspiration images before choosing or creating assets.
+Build a polished, responsive, multi-page concept storefront for **Red Crown Shoes**, an entirely fictional footwear label. This repository currently contains visual references in `inspirations/` and no application code. Begin by inspecting the repository and the inspiration images before choosing or creating assets.
 
 The site should feel like a premium, energetic footwear campaign: deep black surfaces, high-contrast white type, and controlled neon-red light. The landing page must put one large, unbranded 3D shoe at the center of the experience, with concise editorial copy and useful actions around it. A dedicated shoe customizer must let visitors change visible shoe colors and see their choices reflected immediately.
 
@@ -13,9 +13,9 @@ Treat this as a complete, believable design prototype. Do not present it as a re
 Review all files in `inspirations/`. Use them as visual direction, not as assets to reproduce literally.
 
 - Draw from the editorial product layouts, oversized footwear imagery, condensed headlines, product grids, and responsive compositions in the references.
-- The supplied palette reference suggests near-black backgrounds, bright white typography, and restrained secondary grays. Red Tape's signature accent should instead be vivid red with a soft, carefully controlled glow.
-- Create a distinct Red Tape design. Do not reuse third-party logos, trademarks, product names, brand claims, or copied page compositions visible in screenshots. The shoe and all branding in the finished site must be original and unbranded apart from Red Tape's own wordmark and X mark.
-- The logo is a simple **X made from two crossing strokes**. Create it with inline SVG or CSS and pair it with the words “RED TAPE”. Do not use a swoosh, a cross/plus sign, or another company's mark.
+- The supplied palette reference suggests near-black backgrounds, bright white typography, and restrained secondary grays. Red Crown's signature accent should instead be vivid red with a soft, carefully controlled glow.
+- Create a distinct Red Crown design. Do not reuse third-party logos, trademarks, product names, brand claims, or copied page compositions visible in screenshots. The shoe and all branding in the finished site must be original and unbranded apart from Red Crown's own wordmark and X mark.
+- The logo is a simple **X made from two crossing strokes**. Create it with inline SVG or CSS and pair it with the words “RED CROWN”. Do not use a swoosh, a cross/plus sign, or another company's mark.
 
 ## Product and design direction
 
@@ -57,7 +57,7 @@ Use compatible stable package versions, checking official documentation when API
 Implement these real, directly navigable routes with shared header/footer and coherent page metadata:
 
 1. **`/` — Home**
-   - A strong first-screen campaign with Red Tape wordmark/X, navigation, an oversized unbranded 3D shoe, headline, one-sentence supporting copy, and clear “Explore the collection” and “Customize your pair” actions.
+   - A strong first-screen campaign with Red Crown wordmark/X, navigation, an oversized unbranded 3D shoe, headline, one-sentence supporting copy, and clear “Explore the collection” and “Customize your pair” actions.
    - Place supporting labels or feature notes beside the shoe on wide screens; stack them without overlap on small screens.
    - Continue with a concise featured collection, a short design/materials story, and a clear route into the customizer.
 2. **`/shop` — Collection**
@@ -141,7 +141,7 @@ Do not create empty pages just to match this outline. Finish the core routes and
 
 ## Definition of done
 
-- A complete, polished Red Tape Shoes concept site exists with all routes above and a consistent dark/neon-red identity.
+- A complete, polished Red Crown Shoes concept site exists with all routes above and a consistent dark/neon-red identity.
 - The landing page clearly features the large, interactive, unbranded 3D shoe and readable side copy on wide screens, adapting cleanly to mobile.
 - The customizer changes the shoe preview and exposes a useful summary/reset flow, including a usable fallback when 3D is unavailable.
 - Shop, product, and demo bag interactions work; all navigation destinations resolve; invalid product routes are handled.

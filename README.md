@@ -1,6 +1,6 @@
-# Red Tape — concept storefront
+# Red Crown — concept storefront
 
-A multi-page design prototype for **Red Tape**, a fictional footwear label. Nothing here is for sale: prices are concept prices, the bag is a local demo and no payment is processed.
+A multi-page design prototype for **Red Crown**, a fictional footwear label. Nothing here is for sale: prices are concept prices, the bag is a local demo and no payment is processed.
 
 ## Run it
 
@@ -21,7 +21,7 @@ Checks: `npm run lint`, `npm run typecheck`, `npm run build`.
 
 - **Next.js 16** (App Router, Cache Components, Turbopack) · **React 19.3** · **TypeScript**
 - **Tailwind CSS v4**, with brand tokens defined in `app/globals.css` (`@theme`)
-- **three.js + React Three Fiber**: the procedural 3D shoe, lazy loaded on the client
+- **three.js + React Three Fiber**: the realistic 3D shoe, lazy loaded on the client and recoloured live by zone
 - **Motion** for layout/presence animation; CSS for everything simpler; native **View Transitions** between routes
 - **Lucide** icons; fonts (Anton, Geist, Geist Mono) are self-hosted at build time via `next/font`
 
@@ -40,9 +40,15 @@ Checks: `npm run lint`, `npm run typecheck`, `npm run build`.
 ## Where things live
 
 - `data/products.ts`: the single source for products, colourways, zones, palette and presets
-- `components/shoe/geometry.ts`: the procedural, unbranded shoe. Swap in a GLB by returning equivalent meshes from `shoe-canvas.tsx` and keeping the zone → material mapping
+- `components/shoe/shoe-assets.ts`: loads `public/models/shoe.glb` and its maps; a small shader tints each zone (upper, tape & heel, laces, midsole, outsole) while keeping the model's scanned shading
 - `components/shoe/shoe-stage.tsx`: poster/fallback, lazy canvas, drag/keyboard rotation, offscreen pausing
-- `components/shoe-art.tsx`: the SVG illustration used for cards, the poster and the no-WebGL fallback
+- `public/images/shoes/`: still renders of every colourway, preset and layer, used for cards, posters and the no-WebGL fallback
+- `components/shoe-art.tsx`: SVG illustration, used only as the fallback for custom colour combinations
+- `scripts/shoe-pipeline/`: how the model and renders were produced
 - `lib/bag.ts`, `lib/local-store.ts`: the localStorage-backed bag and draft stores
 
 Append `?webgl=off` to any URL to preview the no-WebGL fallback.
+
+## Credits
+
+The 3D shoe is based on [“Materials Variants Shoe”](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/MaterialsVariantsShoe) © 2021 Shopify, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Modified: original colourways removed, demo marks painted out, recoloured by zone. Red Crown names, colourways, copy and branding are original to this concept.

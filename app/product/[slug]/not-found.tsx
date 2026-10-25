@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { FEATURED } from "@/data/products";
-import { ShoeArt } from "@/components/shoe-art";
+import Image from "next/image";
+import { productImage, SHOE_IMAGE } from "@/lib/shoe-images";
 
 export default function ProductNotFound() {
-  const ghost = FEATURED[0];
   return (
-    <div className="shell grid items-center gap-10 py-20 lg:grid-cols-2">
+    <div className="shell section-y grid items-center gap-10 lg:grid-cols-2">
       <div>
         <p className="eyebrow text-signal">Shoe not found</p>
         <h1 className="display-xl mt-5">
@@ -27,7 +26,7 @@ export default function ProductNotFound() {
         </div>
       </div>
       <div className="opacity-30 grayscale" aria-hidden>
-        <ShoeArt colors={ghost.colorways[0].colors} build={ghost.build} className="w-full" />
+        <Image src={productImage("margin", "fog")} alt="" width={SHOE_IMAGE.width} height={SHOE_IMAGE.height} sizes="50vw" className="h-auto w-full" />
       </div>
     </div>
   );

@@ -1,12 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { Component, useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useReducedMotion } from "motion/react";
 import { Hand, RotateCcw, RotateCw, Undo2 } from "lucide-react";
-import type { Build, ShoeColors, Zone } from "@/data/products";
+import type { Build, Finish, ShoeColors, Zone } from "@/data/products";
 import { ShoeArt } from "@/components/shoe-art";
 import { cn } from "@/lib/format";
+import { SHOE_IMAGE } from "@/lib/shoe-images";
 import { Rig } from "./rig";
 
 const ShoeCanvas = dynamic(() => import("./shoe-canvas"), { ssr: false });
@@ -53,18 +55,42 @@ export interface ShoeStageProps {
   view?: { yaw: number; pitch: number; key: number } | null;
   pulse?: { zone: Zone; key: number } | null;
   fill?: number;
+  finish?: Finish;
   controls?: boolean;
   className?: string;
   glow?: "strong" | "soft";
+  /** Pre-rendered still of these colours: shown while loading and without WebGL. */
+  poster?: string | null;
+  /** Load the poster eagerly (above-the-fold stages). */
+  priority?: boolean;
 }
 
 type Status = "loading" | "ready" | "failed";
 
-export function ShoeStage({ colors, build, label, view, pulse, fill, controls = true, className, glow = "soft" }: ShoeStageProps) {
+/** Fresh canvases to try after a lost context or load error before settling on the still. */
+const MAX_RETRIES = 3;
+
+export function ShoeStage({
+  colors,
+  build,
+  label,
+  view,
+  pulse,
+  fill,
+  finish,
+  controls = true,
+  className,
+  glow = "soft",
+  poster,
+  priority,
+}: ShoeStageProps) {
   const reducedMotion = useReducedMotion() ?? false;
   const webgl = useWebgl();
   const [status, setStatus] = useState<Status>("loading");
   const [touched, setTouched] = useState(false);
+  // Bumping this remounts the canvas with a brand-new WebGL context.
+  const [attempt, setAttempt] = useState(0);
+  const failures = useRef(0);
   const [rig] = useState(() => new Rig());
   const wrapper = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; id: number; type: string } | null>(null);
@@ -112,6 +138,40 @@ export function ShoeStage({ colors, build, label, view, pulse, fill, controls = 
   );
 
   const reset = useCallback(() => rig.reset(), [rig]);
+
+  /*
+   * Contexts get lost for ordinary reasons: the renderer is torn down when a
+   * page is kept alive in the background, Strict Mode remounts in development,
+   * or the browser reclaims GPU memory. Recover with a new canvas and only
+   * fall back to the still after repeated failures.
+   */
+  const onSceneError = useCallback(() => {
+    failures.current += 1;
+    if (failures.current > MAX_RETRIES) {
+      setStatus("failed");
+      return;
+    }
+    setStatus("loading");
+    setAttempt((n) => n + 1);
+  }, []);
+
+  // Effects re-run when a kept-alive page is shown again. Its renderer was torn
+  // down while hidden, so start a fresh one.
+  const shownBefore = useRef(false);
+  useEffect(() => {
+    if (!shownBefore.current) {
+      shownBefore.current = true;
+      return;
+    }
+    failures.current = 0;
+    setStatus("loading");
+    setAttempt((n) => n + 1);
+  }, []);
+
+  const onSceneReady = useCallback(() => {
+    failures.current = 0;
+    setStatus((s) => (s === "loading" ? "ready" : s));
+  }, []);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!ready || event.button !== 0) return;
@@ -195,21 +255,34 @@ export function ShoeStage({ colors, build, label, view, pulse, fill, controls = 
         )}
         aria-hidden={ready}
       >
-        <ShoeArt colors={colors} build={build} title={ready ? undefined : label} className="h-auto max-h-full w-full max-w-full" />
+        {poster ? (
+          <Image
+            src={poster}
+            alt={ready ? "" : label}
+            width={SHOE_IMAGE.width}
+            height={SHOE_IMAGE.height}
+            sizes="(min-width: 1024px) 60vw, 100vw"
+            preload={priority}
+            loading={priority ? "eager" : undefined}
+            className="h-auto max-h-full w-full object-contain"
+          />
+        ) : (
+          <ShoeArt colors={colors} build={build} title={ready ? undefined : label} className="h-auto max-h-full w-full max-w-full" />
+        )}
       </div>
 
       {show3d && (
-        <SceneBoundary onError={() => setStatus("failed")}>
+        <SceneBoundary key={attempt} onError={onSceneError}>
           <div className={cn("absolute inset-0 transition-opacity delay-100 duration-700", ready ? "opacity-100" : "opacity-0")}>
             <ShoeCanvas
               colors={colors}
-              build={build}
               rig={rig}
               reducedMotion={reducedMotion}
               pulse={pulse}
               fill={fill}
-              onReady={() => setStatus((s) => (s === "loading" ? "ready" : s))}
-              onError={() => setStatus("failed")}
+              finish={finish}
+              onReady={onSceneReady}
+              onError={onSceneError}
             />
           </div>
         </SceneBoundary>
@@ -245,7 +318,7 @@ export function ShoeStage({ colors, build, label, view, pulse, fill, controls = 
       )}
 
       {status === "failed" || webgl === false ? (
-        <p className="eyebrow absolute bottom-3 left-3 text-dim">Illustrated view · 3D unavailable on this device</p>
+        <p className="eyebrow absolute bottom-3 left-3 text-dim">{poster ? "Still view" : "Illustrated view"} · 3D unavailable on this device</p>
       ) : null}
     </div>
   );
