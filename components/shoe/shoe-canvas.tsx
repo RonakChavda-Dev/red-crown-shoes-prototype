@@ -18,6 +18,8 @@ export interface ShoeCanvasProps {
   fill?: number;
   /** Surface of the upper. */
   finish?: Finish;
+  /** Pixels kept clear along the bottom edge (for overlaid controls). */
+  bottomInset?: number;
   onReady: () => void;
   onError: () => void;
 }
@@ -119,15 +121,20 @@ function setTargets(targets: Record<Zone, THREE.Color>, colors: ShoeColors, shoe
   }
 }
 
-function frameCamera(camera: THREE.Camera, width: number, height: number, shoeHeight: number, fill: number) {
+function frameCamera(camera: THREE.Camera, width: number, height: number, shoeHeight: number, fill: number, bottomInset: number) {
   const perspective = camera as THREE.PerspectiveCamera;
   const tan = Math.tan(THREE.MathUtils.degToRad(perspective.fov / 2));
   const aspect = width / Math.max(1, height);
+  // Fit the shoe into the area above the inset, then shift the frame up to centre it there.
+  const inset = Math.min(bottomInset, height * 0.3);
+  const usable = (height - inset) / Math.max(1, height);
   const halfWidth = (SHOE_LENGTH + 0.1) / 2 / fill;
   const halfHeight = (shoeHeight / 2 + 0.25) / fill;
-  const distance = Math.max(halfWidth / (tan * aspect), halfHeight / tan) + 1;
+  const distance = Math.max(halfWidth / (tan * aspect), halfHeight / (tan * usable)) + 1;
   perspective.position.set(0, distance * 0.16, distance);
   perspective.lookAt(0, -0.05, 0);
+  if (inset > 0) perspective.setViewOffset(width, height, 0, inset / 2, width, height);
+  else perspective.clearViewOffset();
   perspective.updateProjectionMatrix();
 }
 
@@ -165,7 +172,7 @@ function setupRenderer(
   });
 }
 
-function Shoe({ colors, rig, reducedMotion, pulse, onReady, fill = 0.92, finish = "knit" }: Omit<ShoeCanvasProps, "onError">) {
+function Shoe({ colors, rig, reducedMotion, pulse, onReady, fill = 0.92, finish = "knit", bottomInset = 0 }: Omit<ShoeCanvasProps, "onError">) {
   const assets = use(loadShoeAssets());
   const shoe = useMemo(() => createShoeMaterial(assets.maps), [assets]);
   const shadowTexture = useMemo(() => makeShadowTexture(), []);
@@ -191,9 +198,9 @@ function Shoe({ colors, rig, reducedMotion, pulse, onReady, fill = 0.92, finish 
   );
 
   useEffect(() => {
-    frameCamera(camera, size.width, size.height, height, fill);
+    frameCamera(camera, size.width, size.height, height, fill, bottomInset);
     invalidate();
-  }, [camera, size, fill, height, invalidate]);
+  }, [camera, size, fill, height, bottomInset, invalidate]);
 
   // New colours: ease towards them (or snap on first paint / reduced motion).
   useEffect(() => {

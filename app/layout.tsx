@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/toaster";
 import { RevealObserver } from "@/components/reveal-observer";
 import { LoadingScreen } from "@/components/loading-screen";
+import { ViewTransitionGuard } from "@/components/view-transition-guard";
 import { pageMetadata, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Toaster />
         </MotionConfig>
         <RevealObserver />
+        <ViewTransitionGuard />
       </body>
     </html>
   );

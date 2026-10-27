@@ -20,9 +20,9 @@ function detectWebgl() {
   try {
     if (new URLSearchParams(window.location.search).get("webgl") === "off") return (webglSupport = false);
     const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-    webglSupport = !!ctx;
-    (ctx as WebGLRenderingContext | null)?.getExtension("WEBGL_lose_context")?.loseContext();
+    // The probe canvas is simply dropped: forcing a context loss here makes
+    // Firefox log a "WebGL context was lost" warning on every page load.
+    webglSupport = !!(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
   } catch {
     webglSupport = false;
   }
@@ -70,6 +70,9 @@ type Status = "loading" | "ready" | "failed";
 /** Fresh canvases to try after a lost context or load error before settling on the still. */
 const MAX_RETRIES = 3;
 
+/** Height of the control row (44px buttons + 12px offset), kept clear of the shoe. */
+const CONTROLS_INSET = 56;
+
 export function ShoeStage({
   colors,
   build,
@@ -93,7 +96,7 @@ export function ShoeStage({
   const failures = useRef(0);
   const [rig] = useState(() => new Rig());
   const wrapper = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ x: number; y: number; id: number; type: string } | null>(null);
+  const drag = useRef<{ x: number; y: number; id: number } | null>(null);
   const introPlayed = useRef(false);
   const hintId = useId();
 
@@ -173,9 +176,71 @@ export function ShoeStage({
     setStatus((s) => (s === "loading" ? "ready" : s));
   }, []);
 
+  /*
+   * Touch gets its own direction-locked gesture. A swipe that starts sideways
+   * grabs the shoe (and may then tilt it too); one that starts vertically is
+   * left alone so the page scrolls as normal. Two fingers are left to the
+   * browser for pinch-zoom. Native listeners are needed because React's
+   * touchmove handlers are passive and can't stop the page from scrolling.
+   */
+  useEffect(() => {
+    const element = wrapper.current;
+    if (!element || !ready) return;
+    let gesture: { x: number; y: number; startX: number; startY: number; mode: "pending" | "rotate" | "scroll" } | null = null;
+
+    const end = () => {
+      if (gesture?.mode === "rotate") rig.setDragging(false);
+      gesture = null;
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1 || (event.target as Element).closest("button")) return end();
+      const t = event.touches[0];
+      gesture = { x: t.clientX, y: t.clientY, startX: t.clientX, startY: t.clientY, mode: "pending" };
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!gesture || gesture.mode === "scroll") return;
+      if (event.touches.length !== 1) return end();
+      const t = event.touches[0];
+      if (gesture.mode === "pending") {
+        const ox = Math.abs(t.clientX - gesture.startX);
+        const oy = Math.abs(t.clientY - gesture.startY);
+        if (Math.max(ox, oy) < 6) return;
+        // Sideways wins ties; once the page has started scrolling we can't take over.
+        if (ox * 1.2 < oy || !event.cancelable) {
+          gesture.mode = "scroll";
+          return;
+        }
+        gesture.mode = "rotate";
+        rig.setDragging(true);
+        setTouched(true);
+      }
+      if (event.cancelable) event.preventDefault();
+      const dx = t.clientX - gesture.x;
+      const dy = t.clientY - gesture.y;
+      gesture.x = t.clientX;
+      gesture.y = t.clientY;
+      rig.nudge(dx * 0.014, dy * 0.008);
+    };
+
+    element.addEventListener("touchstart", onTouchStart, { passive: true });
+    element.addEventListener("touchmove", onTouchMove, { passive: false });
+    element.addEventListener("touchend", end);
+    element.addEventListener("touchcancel", end);
+    return () => {
+      end();
+      element.removeEventListener("touchstart", onTouchStart);
+      element.removeEventListener("touchmove", onTouchMove);
+      element.removeEventListener("touchend", end);
+      element.removeEventListener("touchcancel", end);
+    };
+  }, [ready, rig]);
+
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!ready || event.button !== 0) return;
-    drag.current = { x: event.clientX, y: event.clientY, id: event.pointerId, type: event.pointerType };
+    // Touch is handled by the gesture above.
+    if (!ready || event.button !== 0 || event.pointerType === "touch") return;
+    drag.current = { x: event.clientX, y: event.clientY, id: event.pointerId };
     event.currentTarget.setPointerCapture(event.pointerId);
     rig.setDragging(true);
   };
@@ -187,8 +252,7 @@ export function ShoeStage({
     const dy = event.clientY - d.y;
     d.x = event.clientX;
     d.y = event.clientY;
-    // Touch only rotates horizontally so vertical swipes keep scrolling the page.
-    rig.nudge(dx * 0.011, d.type === "touch" ? 0 : dy * 0.007);
+    rig.nudge(dx * 0.011, dy * 0.007);
     if (!touched && Math.abs(dx) > 1) setTouched(true);
   };
 
@@ -234,7 +298,7 @@ export function ShoeStage({
         "focus-visible:ring-2 focus-visible:ring-signal/70 focus-visible:ring-offset-0",
         className,
       )}
-      style={{ touchAction: "pan-y" }}
+      style={{ touchAction: "pan-y pinch-zoom" }}
     >
       {/* Controlled red light pooled under the shoe */}
       <div
@@ -251,6 +315,7 @@ export function ShoeStage({
       <div
         className={cn(
           "absolute inset-0 flex items-center justify-center px-[4%] transition-[opacity,transform] ease-out",
+          controls && "pb-14",
           ready ? "scale-[0.97] opacity-0 duration-200" : "opacity-100 duration-500",
         )}
         aria-hidden={ready}
@@ -281,6 +346,7 @@ export function ShoeStage({
               pulse={pulse}
               fill={fill}
               finish={finish}
+              bottomInset={controls ? CONTROLS_INSET : 0}
               onReady={onSceneReady}
               onError={onSceneError}
             />
@@ -289,7 +355,7 @@ export function ShoeStage({
       )}
 
       <p id={hintId} className="sr-only">
-        Drag to rotate, or use the arrow keys while this view is focused. Press Home to reset the angle.
+        Drag or swipe sideways to rotate, or use the arrow keys while this view is focused. Press Home to reset the angle.
       </p>
 
       {controls && ready && (
@@ -297,13 +363,15 @@ export function ShoeStage({
           <p
             aria-hidden
             className={cn(
-              "eyebrow flex items-center gap-2 text-dim transition-opacity duration-500",
+              "eyebrow flex min-w-0 items-center gap-2 text-dim transition-opacity duration-500",
               touched ? "opacity-0" : "opacity-100",
             )}
           >
-            <Hand className="size-3.5" strokeWidth={1.75} /> Drag to rotate
+            <Hand className="size-3.5 shrink-0" strokeWidth={1.75} />
+            <span className="pointer-coarse:hidden">Drag to rotate</span>
+            <span className="hidden pointer-coarse:inline">Swipe to rotate</span>
           </p>
-          <div className="flex gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="flex shrink-0 gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
             <StageButton label="Rotate left" onClick={() => nudge(-0.6)}>
               <RotateCcw className="size-4" strokeWidth={1.75} />
             </StageButton>

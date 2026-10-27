@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Menu, ShoppingBag, X } from "lucide-react";
 import { Wordmark } from "@/components/logo";
@@ -10,26 +10,81 @@ import { bagCount, useBag } from "@/lib/bag";
 import { useHydrated } from "@/lib/local-store";
 import { cn } from "@/lib/format";
 
+const MENU_LINKS = [{ href: "/", label: "Home" }, ...NAV_LINKS, { href: "/bag", label: "Bag" }];
+
+/** Matches the longest exit animation for `.mobile-menu[data-closing]` in globals.css. */
+const MENU_EXIT_MS = 380;
+
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const menu = useRef<HTMLDialogElement>(null);
+  const closeTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const closeMenu = () => menu.current?.close();
+  /** Play the menu's exit animation (skipped for reduced motion), then close it and run `then`. */
+  const closeMenu = (then?: () => void) => {
+    const dialog = menu.current;
+    if (!dialog?.open) return then?.();
+    window.clearTimeout(closeTimer.current);
+    const finish = () => {
+      delete dialog.dataset.closing;
+      dialog.close();
+      then?.();
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return finish();
+    dialog.dataset.closing = "";
+    closeTimer.current = window.setTimeout(finish, MENU_EXIT_MS);
+  };
+
+  // Let the menu animate away before the page transition snapshots the screen.
+  const navigateFromMenu = (event: { preventDefault: () => void }, href: string) => {
+    event.preventDefault();
+    closeMenu(() => router.push(href));
+  };
+
+  const openMenu = () => {
+    const dialog = menu.current;
+    if (!dialog) return;
+    window.clearTimeout(closeTimer.current);
+    delete dialog.dataset.closing;
+    if (!dialog.open) dialog.showModal();
+  };
+
+  // The menu is phone-only: drop it (and its scroll lock) if the window grows past it.
+  useEffect(() => {
+    const wide = window.matchMedia("(min-width: 48rem)");
+    const onChange = () => {
+      if (wide.matches && menu.current?.open) {
+        window.clearTimeout(closeTimer.current);
+        delete menu.current.dataset.closing;
+        menu.current.close();
+      }
+    };
+    wide.addEventListener("change", onChange);
+    return () => {
+      wide.removeEventListener("change", onChange);
+      window.clearTimeout(closeTimer.current);
+    };
+  }, []);
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300",
-        scrolled ? "border-line bg-ink/80 backdrop-blur-md" : "border-transparent bg-ink/0",
-      )}
-    >
+    <header className="sticky top-0 z-50">
+      {/* Fading a ready-blurred layer is far smoother than animating the blur itself. */}
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 -z-10 border-b border-line bg-ink/80 backdrop-blur-md transition-opacity duration-300 ease-out",
+          scrolled ? "opacity-100" : "opacity-0",
+        )}
+      />
       <a
         href="#main"
         className="btn btn-primary absolute left-3 top-3 z-10 -translate-y-24 focus-visible:translate-y-0"
@@ -64,7 +119,7 @@ export function SiteHeader() {
             className="grid size-11 place-items-center rounded-[var(--radius-xs)] text-paper md:hidden"
             aria-label="Open menu"
             aria-haspopup="dialog"
-            onClick={() => menu.current?.showModal()}
+            onClick={openMenu}
           >
             <Menu className="size-6" strokeWidth={1.5} />
           </button>
@@ -78,17 +133,21 @@ export function SiteHeader() {
         onClick={(event) => {
           if (event.target === event.currentTarget) closeMenu();
         }}
+        onCancel={(event) => {
+          event.preventDefault();
+          closeMenu();
+        }}
       >
         <div className="shell flex h-full flex-col">
           <div className="flex h-[var(--header-h)] items-center justify-between">
-            <Link href="/" onNavigate={closeMenu} aria-label="Red Crown home">
+            <Link href="/" onNavigate={(event) => navigateFromMenu(event, "/")} aria-label="Red Crown home">
               <Wordmark />
             </Link>
             <button
               type="button"
               className="grid size-11 place-items-center"
               aria-label="Close menu"
-              onClick={closeMenu}
+              onClick={() => closeMenu()}
               autoFocus
             >
               <X className="size-6" strokeWidth={1.5} />
@@ -96,11 +155,15 @@ export function SiteHeader() {
           </div>
           <nav aria-label="Mobile" className="mt-10 flex-1">
             <ul className="space-y-1">
-              {[{ href: "/", label: "Home" }, ...NAV_LINKS, { href: "/bag", label: "Bag" }].map((link, i) => (
-                <li key={link.href} className="menu-item" style={{ "--i": i } as React.CSSProperties}>
+              {MENU_LINKS.map((link, i) => (
+                <li
+                  key={link.href}
+                  className="menu-item"
+                  style={{ "--i": i, "--r": MENU_LINKS.length - 1 - i } as React.CSSProperties}
+                >
                   <Link
                     href={link.href}
-                    onNavigate={closeMenu}
+                    onNavigate={(event) => navigateFromMenu(event, link.href)}
                     aria-current={pathname === link.href ? "page" : undefined}
                     className="group flex items-baseline justify-between border-b border-line py-4"
                   >

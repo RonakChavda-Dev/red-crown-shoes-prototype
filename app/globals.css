@@ -64,6 +64,8 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-padding-top: calc(var(--header-h) + 1rem);
+    /* Keep the layout still when the menu locks scrolling and the scrollbar goes. */
+    scrollbar-gutter: stable;
     background: var(--color-ink);
   }
 
@@ -438,18 +440,64 @@ body::after {
   background-size: auto, 5px 5px;
 }
 
-/* Mobile menu: links cascade in when the dialog opens. */
+/* Mobile menu: the panel drops in, links cascade after it, and it fades out on close. */
 html:has(dialog[open]) {
   overflow: hidden;
 }
 
-.mobile-menu[open] .menu-item {
-  animation: menu-in 0.6s var(--ease-out-expo) both;
-  animation-delay: calc(var(--i) * 55ms + 60ms);
+.mobile-menu[open] {
+  animation: menu-panel-in 0.4s var(--ease-out-expo) both;
 }
 
-.mobile-menu[open] {
-  animation: fade-in 0.25s ease both;
+.mobile-menu[open] .menu-item {
+  animation: menu-in 0.6s var(--ease-out-expo) both;
+  animation-delay: calc(var(--i) * 45ms + 80ms);
+}
+
+.mobile-menu[open]::backdrop {
+  animation: fade-in 0.3s ease both;
+}
+
+/* Closing mirrors opening: links fall away bottom-first, then the panel lifts out. */
+.mobile-menu[data-closing] {
+  animation: menu-panel-out 0.28s cubic-bezier(0.4, 0, 1, 1) 0.1s both;
+  pointer-events: none;
+}
+
+.mobile-menu[data-closing] .menu-item {
+  animation: menu-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+  animation-delay: calc(var(--r) * 30ms);
+}
+
+.mobile-menu[data-closing]::backdrop {
+  animation: fade-out 0.28s ease 0.1s both;
+}
+
+@keyframes menu-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -16px, 0);
+  }
+}
+
+@keyframes menu-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes menu-panel-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes menu-in {

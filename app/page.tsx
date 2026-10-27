@@ -46,7 +46,7 @@ export default function HomePage() {
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(55%_50%_at_60%_45%,#17171b_0%,transparent_70%)]"
         />
-        <div className="shell page-top grid items-center gap-x-10 gap-y-10 pb-[var(--space-stack)] lg:min-h-[calc(100svh-var(--header-h))] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)_minmax(0,2.2fr)] lg:pt-0">
+        <div className="shell page-top grid grid-cols-[minmax(0,1fr)] items-center gap-x-10 gap-y-10 pb-[var(--space-stack)] lg:min-h-[calc(100svh-var(--header-h))] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)_minmax(0,2.2fr)] lg:pt-0">
           <div className="relative z-10">
             <p className="eyebrow fade-up text-mute">
               <span className="text-signal">RC-01 Strand</span> · Concept season 01
@@ -72,7 +72,7 @@ export default function HomePage() {
               way.
             </p>
             <div
-              className="fade-up mt-8 flex flex-col gap-3 min-[420px]:flex-row"
+              className="fade-up mt-8 flex flex-col gap-3 min-[520px]:flex-row"
               style={{ "--rise-delay": "480ms" } as React.CSSProperties}
             >
               <Link href="/shop" className="btn btn-primary group">
@@ -94,7 +94,7 @@ export default function HomePage() {
               fill={0.98}
               poster={productImage("strand", "signal-bone")}
               priority
-              className="fade-up aspect-[5/4] w-full sm:aspect-[16/11] lg:aspect-[6/5]"
+              className="fade-up aspect-square w-full min-[480px]:aspect-[5/4] sm:aspect-[16/11] lg:aspect-[6/5]"
             />
           </div>
 
