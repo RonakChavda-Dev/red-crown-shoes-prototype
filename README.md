@@ -144,13 +144,10 @@ The site is a static export (`output: "export"`) — plain HTML, JS, images and 
 | --- | --- |
 | Build command | `npm run build` |
 | Build output directory | `out` |
-| Environment variable | `NEXT_PUBLIC_SITE_URL` = your site's address, e.g. `https://red-crown.pages.dev` |
 | Environment variable | `NODE_VERSION` = `22` |
 
-**Vercel** works out of the box and uses the project's production URL automatically.
-
-> [!IMPORTANT]
-> Set `NEXT_PUBLIC_SITE_URL` before building so canonical URLs, the sitemap and share images point at your domain. It's read at build time (rebuild after changing it) and falls back to `http://localhost:3000` when unset outside Vercel.
+> [!NOTE]
+> Canonical URLs, the sitemap and share images use `https://redcrown-prototype.pages.dev` by default (see `PRODUCTION_URL` in `lib/seo.ts`). To deploy on another domain, change that constant or set `NEXT_PUBLIC_SITE_URL` at build time.
 
 **Updating share images:** after changing products or renders, regenerate the images in `public/og/` with `scripts/og/render-og.mjs`, then bump `OG_VERSION` in `lib/seo.ts` so social platforms fetch the new ones.
 

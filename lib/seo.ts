@@ -5,20 +5,22 @@ export const SITE_TAGLINE = "Concept footwear";
 
 /**
  * Absolute origin used for canonical URLs, the sitemap and share images.
- * Set NEXT_PUBLIC_SITE_URL to the deployed domain; Vercel deployments fall
- * back to the project's production URL automatically.
+ * Defaults to the live Cloudflare Pages domain so share images resolve without
+ * any host configuration. NEXT_PUBLIC_SITE_URL overrides it (e.g. a custom domain);
+ * `next dev` uses localhost.
  */
+const PRODUCTION_URL = "https://redcrown-prototype.pages.dev";
+
 export const SITE_URL = (() => {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
   if (explicit) return explicit.replace(/\/+$/, "");
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (vercel) return `https://${vercel}`;
-  return "http://localhost:3000";
+  if (process.env.NODE_ENV === "development") return "http://localhost:3000";
+  return PRODUCTION_URL;
 })();
 
 /** Share images live in /public/og (see scripts/og). 1200×630. */
 export const OG_SIZE = { width: 1200, height: 630 } as const;
-const OG_VERSION = 1;
+const OG_VERSION = 2;
 export const ogImage = (name: string) => `/og/${name}.jpg?v=${OG_VERSION}`;
 
 interface PageSeo {
